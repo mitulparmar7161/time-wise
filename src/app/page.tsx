@@ -25,7 +25,6 @@ const APP_SESSION_KEY = "timewiseSession";
 
 import { LogEntry } from "@/hooks/use-time-tracking";
 
-
 interface SessionState {
   sessionDate: string;
   startTime: string;
@@ -43,7 +42,7 @@ export default function Home() {
   const [settings, setSettings] = useLocalStorage(APP_SETTINGS_KEY, {
     fullDayHours: "8",
     fullDayMinutes: "0",
-    apiKey: "", 
+    apiKey: "",
   });
 
   const [sessionState, setSessionState] = useLocalStorage<SessionState>(APP_SESSION_KEY, {
@@ -69,29 +68,29 @@ export default function Home() {
     setIsClient(true);
 
     const todayStr = format(new Date(), "yyyy-MM-dd");
-    
+
     // Migration: ensure logs exists
     let newState = { ...sessionState };
     let hasChanges = false;
 
     if (!newState.logs) {
-        newState.logs = [];
-        hasChanges = true;
+      newState.logs = [];
+      hasChanges = true;
     }
-    
+
     // Migration: ensure totalBreakMs exists
     if (newState.totalBreakMs === undefined) {
-        newState.totalBreakMs = (newState.totalBreakMinutes || 0) * 60 * 1000;
-        hasChanges = true;
+      newState.totalBreakMs = (newState.totalBreakMinutes || 0) * 60 * 1000;
+      hasChanges = true;
     }
 
     if (hasChanges) {
-        setSessionState(newState);
+      setSessionState(newState);
     }
-    
+
     if (sessionState.sessionDate !== todayStr) {
       if (!sessionState.startTime) {
-          startNewSession(); // Initialize
+        startNewSession(); // Initialize
       }
     }
   }, []); // Run once on mount
@@ -120,9 +119,9 @@ export default function Home() {
   const startNewSession = (startTime = new Date()) => {
     const todayStr = format(startTime, "yyyy-MM-dd");
     const newLog: LogEntry = {
-        type: "punch-in",
-        timestamp: startTime.toISOString(),
-        message: "Punched In",
+      type: "punch-in",
+      timestamp: startTime.toISOString(),
+      message: "Punched In",
     };
 
     setSessionState({
@@ -217,37 +216,32 @@ export default function Home() {
         progress: 0,
         isWorkDayOver: false,
         isValid: false,
-         currentTotalBreakMs: 0,
-         workDoneMs: 0,
+        currentTotalBreakMs: 0,
+        workDoneMs: 0,
       };
     }
     const workingMs = (workingHours * 60 + workingMinutes) * 60 * 1000;
-    
+
     // Calculate current break duration if active
     let additionalBreakMs = 0;
     if (sessionState.isOnBreak && sessionState.breakStartTime) {
-        additionalBreakMs = Math.max(0, currentTime.getTime() - new Date(sessionState.breakStartTime).getTime());
+      additionalBreakMs = Math.max(
+        0,
+        currentTime.getTime() - new Date(sessionState.breakStartTime).getTime()
+      );
     }
 
     const totalBreakTimeMs = (sessionState.totalBreakMs || 0) + additionalBreakMs;
 
-    const completionTimeDate = new Date(
-      arrivalTimeDate.getTime() + workingMs + totalBreakTimeMs
-    );
-    const timeRemainingMs =
-      completionTimeDate.getTime() - currentTime.getTime();
+    const completionTimeDate = new Date(arrivalTimeDate.getTime() + workingMs + totalBreakTimeMs);
+    const timeRemainingMs = completionTimeDate.getTime() - currentTime.getTime();
 
     // Work done = Time elapsed since arrival - Total Break Time
-    const elapsedMsSinceArrival = Math.max(
-      0,
-      currentTime.getTime() - arrivalTimeDate.getTime()
-    );
+    const elapsedMsSinceArrival = Math.max(0, currentTime.getTime() - arrivalTimeDate.getTime());
     const workDoneMs = elapsedMsSinceArrival - totalBreakTimeMs;
 
     let progressValue =
-      workingMs > 0
-        ? Math.max(0, Math.min(100, (workDoneMs / workingMs) * 100))
-        : 0;
+      workingMs > 0 ? Math.max(0, Math.min(100, (workDoneMs / workingMs) * 100)) : 0;
     if (timeRemainingMs <= 0) progressValue = 100;
 
     return {
@@ -268,7 +262,7 @@ export default function Home() {
     sessionState.startTime,
     sessionState.totalBreakMs,
     sessionState.isOnBreak,
-    sessionState.breakStartTime
+    sessionState.breakStartTime,
   ]);
 
   const setWorkDuration = (mode: "full" | "half") => {
@@ -315,57 +309,64 @@ export default function Home() {
     if (potentialStartTime > now) {
       potentialStartTime = subDays(potentialStartTime, 1);
     }
-    
+
     setSessionState((prev) => ({
       ...prev,
       startTime: potentialStartTime.toISOString(),
-       logs: prev.logs && prev.logs.length > 0
-           ? prev.logs.map((log, index) => 
-               index === 0 && log.type === "punch-in" 
-               ? { ...log, timestamp: potentialStartTime.toISOString() } 
-               : log
-           )
-           : [{ type: "punch-in", timestamp: potentialStartTime.toISOString(), message: "Punched In" }]
+      logs:
+        prev.logs && prev.logs.length > 0
+          ? prev.logs.map((log, index) =>
+              index === 0 && log.type === "punch-in"
+                ? { ...log, timestamp: potentialStartTime.toISOString() }
+                : log
+            )
+          : [
+              {
+                type: "punch-in",
+                timestamp: potentialStartTime.toISOString(),
+                message: "Punched In",
+              },
+            ],
     }));
   };
 
   const handleToggleBreak = () => {
-      const now = new Date();
-      if (sessionState.isOnBreak) {
-          // End Break
-          const breakStart = new Date(sessionState.breakStartTime!);
-          const durationMs = Math.max(0, differenceInMilliseconds(now, breakStart));
-          const durationMinutes = Math.floor(durationMs / 1000 / 60);
-          
-          const newLog: LogEntry = {
-              type: "break-end",
-              timestamp: now.toISOString(),
-              message: `Break Ended (${durationMinutes}m)`,
-          };
+    const now = new Date();
+    if (sessionState.isOnBreak) {
+      // End Break
+      const breakStart = new Date(sessionState.breakStartTime!);
+      const durationMs = Math.max(0, differenceInMilliseconds(now, breakStart));
+      const durationMinutes = Math.floor(durationMs / 1000 / 60);
 
-          setSessionState(prev => ({
-              ...prev,
-              isOnBreak: false,
-              breakStartTime: null,
-              totalBreakMinutes: prev.totalBreakMinutes + durationMinutes,
-              totalBreakMs: (prev.totalBreakMs || 0) + durationMs,
-              logs: [...(prev.logs || []), newLog]
-          }));
-      } else {
-          // Start Break
-          const newLog: LogEntry = {
-              type: "break-start",
-              timestamp: now.toISOString(),
-              message: "Break Started",
-          };
+      const newLog: LogEntry = {
+        type: "break-end",
+        timestamp: now.toISOString(),
+        message: `Break Ended (${durationMinutes}m)`,
+      };
 
-          setSessionState(prev => ({
-              ...prev,
-              isOnBreak: true,
-              breakStartTime: now.toISOString(),
-              logs: [...(prev.logs || []), newLog]
-          }));
-      }
+      setSessionState((prev) => ({
+        ...prev,
+        isOnBreak: false,
+        breakStartTime: null,
+        totalBreakMinutes: prev.totalBreakMinutes + durationMinutes,
+        totalBreakMs: (prev.totalBreakMs || 0) + durationMs,
+        logs: [...(prev.logs || []), newLog],
+      }));
+    } else {
+      // Start Break
+      const newLog: LogEntry = {
+        type: "break-start",
+        timestamp: now.toISOString(),
+        message: "Break Started",
+      };
+
+      setSessionState((prev) => ({
+        ...prev,
+        isOnBreak: true,
+        breakStartTime: now.toISOString(),
+        logs: [...(prev.logs || []), newLog],
+      }));
+    }
   };
 
   const handleAddManualBreak = (minutes: number) => {
@@ -376,9 +377,7 @@ export default function Home() {
     const newLog: LogEntry = {
       type: "manual-break",
       timestamp: now.toISOString(),
-      message: isReduction
-        ? `Break Adjustment (${minutes}m)`
-        : `Manual Break (+${minutes}m)`,
+      message: isReduction ? `Break Adjustment (${minutes}m)` : `Manual Break (+${minutes}m)`,
       durationMs: durationMs,
     };
 
@@ -398,9 +397,7 @@ export default function Home() {
 
       toast({
         title: isReduction ? "Break Reduced" : "Break Added",
-        description: `${isReduction ? "Removed" : "Added"} ${Math.abs(
-          minutes
-        )} minutes.`,
+        description: `${isReduction ? "Removed" : "Added"} ${Math.abs(minutes)} minutes.`,
       });
 
       return {
@@ -418,15 +415,10 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden p-4 sm:p-6 bg-gradient-to-br from-background via-secondary/20 to-background">
-      <WelcomeDialog
-        open={isWelcomeDialogOpen}
-        onOpenChange={setIsWelcomeDialogOpen}
-      />
+      <WelcomeDialog open={isWelcomeDialogOpen} onOpenChange={setIsWelcomeDialogOpen} />
 
       <header className="w-full max-w-7xl flex justify-between items-center mb-4 mx-auto flex-none">
-        <h1 className="text-3xl sm:text-4xl font-bold font-headline text-primary">
-          TimeWise
-        </h1>
+        <h1 className="text-3xl sm:text-4xl font-bold font-headline text-primary">TimeWise</h1>
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <AboutSheet />
@@ -434,13 +426,16 @@ export default function Home() {
       </header>
 
       <main className="w-full max-w-7xl mx-auto flex flex-col gap-6 flex-1 min-h-0">
-        <Tabs defaultValue="tracker" className="h-full flex flex-col">
+        <Tabs defaultValue="mewurk" className="h-full flex flex-col">
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="tracker">Manual Time Tracker</TabsTrigger>
             <TabsTrigger value="mewurk">Mewurk Logs</TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="tracker" className="h-full mt-0 flex-1 min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+
+          <TabsContent
+            value="tracker"
+            className="h-full mt-0 flex-1 min-h-0 data-[state=active]:flex data-[state=active]:flex-col"
+          >
             <TimeTrackerCards
               isWorkDayOver={isWorkDayOver}
               isValid={isDurationValid}
@@ -461,40 +456,43 @@ export default function Home() {
               fullDayHours={settings.fullDayHours}
               fullDayMinutes={settings.fullDayMinutes}
               onDurationSettingsChange={(hours, minutes) => {
-                  setSettings(prev => ({ ...prev, fullDayHours: hours, fullDayMinutes: minutes }));
-                  // Logic to update active duration immediately if in Full mode
-                  // This mimics the effect inside `handleSaveSettings` but for specific values
-                  const h = parseInt(hours, 10) || 0;
-                  const m = parseInt(minutes, 10) || 0;
-                  if (activeDuration.mode === "full") {
-                      setActiveDuration(prev => ({ ...prev, hours: h, minutes: m }));
-                  } else {
-                      const totalMinutes = (h * 60 + m) / 2;
-                        setActiveDuration(prev => ({
-                            ...prev,
-                            hours: Math.floor(totalMinutes / 60),
-                            minutes: totalMinutes % 60,
-                        }));
-                  }
-                  toast({ title: "Updated", description: "Work duration settings updated." });
+                setSettings((prev) => ({ ...prev, fullDayHours: hours, fullDayMinutes: minutes }));
+                // Logic to update active duration immediately if in Full mode
+                // This mimics the effect inside `handleSaveSettings` but for specific values
+                const h = parseInt(hours, 10) || 0;
+                const m = parseInt(minutes, 10) || 0;
+                if (activeDuration.mode === "full") {
+                  setActiveDuration((prev) => ({ ...prev, hours: h, minutes: m }));
+                } else {
+                  const totalMinutes = (h * 60 + m) / 2;
+                  setActiveDuration((prev) => ({
+                    ...prev,
+                    hours: Math.floor(totalMinutes / 60),
+                    minutes: totalMinutes % 60,
+                  }));
+                }
+                toast({ title: "Updated", description: "Work duration settings updated." });
               }}
               onAddManualBreak={handleAddManualBreak}
             />
           </TabsContent>
-          
-          <TabsContent value="mewurk" className="h-full mt-0 flex-1 min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
-             <MewurkLogs 
-                targetHours={Number(settings.fullDayHours) || 8} 
-                targetMinutes={Number(settings.fullDayMinutes) || 0}
-                onSettingsChange={(hours, minutes) => {
-                    setSettings((prev) => ({
-                         ...prev,
-                         fullDayHours: hours,
-                         fullDayMinutes: minutes,
-                    }));
-                     toast({ title: "Updated", description: "Work duration settings updated." });
-                }}
-             />
+
+          <TabsContent
+            value="mewurk"
+            className="h-full mt-0 flex-1 min-h-0 data-[state=active]:flex data-[state=active]:flex-col"
+          >
+            <MewurkLogs
+              targetHours={Number(settings.fullDayHours) || 8}
+              targetMinutes={Number(settings.fullDayMinutes) || 0}
+              onSettingsChange={(hours, minutes) => {
+                setSettings((prev) => ({
+                  ...prev,
+                  fullDayHours: hours,
+                  fullDayMinutes: minutes,
+                }));
+                toast({ title: "Updated", description: "Work duration settings updated." });
+              }}
+            />
           </TabsContent>
         </Tabs>
       </main>

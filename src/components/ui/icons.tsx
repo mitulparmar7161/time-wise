@@ -1,4 +1,3 @@
- 
 import {
   Cog,
   Bot,
@@ -37,8 +36,12 @@ import {
   CalendarCheck,
   AlertTriangle,
   Flag,
-  Target
-} from 'lucide-react';
+  Target,
+  Activity,
+  ArrowDown,
+  ArrowRight,
+  Palette,
+} from "lucide-react";
 
 export const Icons = {
   Cog,
@@ -78,5 +81,9 @@ export const Icons = {
   CalendarCheck,
   AlertTriangle,
   Flag,
-  Target
+  Target,
+  Activity,
+  ArrowDown,
+  ArrowRight,
+  Palette,
 };
