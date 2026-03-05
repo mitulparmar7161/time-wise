@@ -4,9 +4,22 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Icons } from '@/components/ui/icons';
+import { useGitHubContributors } from '@/hooks/use-github-contributors';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
-export function AboutSheet() {
-  const [isOpen, setIsOpen] = useState(false);
+interface AboutSheetProps {
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function AboutSheet({ isOpen: externalIsOpen, onOpenChange }: AboutSheetProps = {}) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const { contributors, loading, error } = useGitHubContributors('mitulparmar7161', 'time-wise');
+  
+  const isOpen = externalIsOpen ?? internalIsOpen;
+  const setIsOpen = onOpenChange ?? setInternalIsOpen;
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -65,6 +78,50 @@ export function AboutSheet() {
                 </a>
                 </Button>
             </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-3">
+            <h3 className="font-semibold text-lg font-headline">Contributors</h3>
+            {loading ? (
+                <div className="flex items-center justify-center py-4">
+                <Icons.Loader className="h-6 w-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading contributors...</span>
+                </div>
+            ) : error ? (
+                <div className="text-sm text-destructive py-4">{error}</div>
+            ) : contributors.length > 0 ? (
+                <ScrollArea className="h-48">
+                <div className="space-y-3">
+                    {contributors.map((contributor) => (
+                    <a
+                        key={contributor.id}
+                        href={contributor.html_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors group"
+                    >
+                        <Avatar className="h-10 w-10">
+                        <AvatarImage src={contributor.avatar_url} alt={contributor.login} />
+                        <AvatarFallback>{contributor.login.slice(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground group-hover:text-primary truncate">
+                            {contributor.login}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            {contributor.contributions} contributions
+                        </p>
+                        </div>
+                        <Icons.Github className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+                    </a>
+                    ))}
+                </div>
+                </ScrollArea>
+            ) : (
+                <div className="text-sm text-muted-foreground py-4">No contributors found</div>
+            )}
             </div>
         </div>
       </SheetContent>

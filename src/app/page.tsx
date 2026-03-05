@@ -38,6 +38,7 @@ interface SessionState {
 export default function Home() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
+  const [isAboutSheetOpen, setIsAboutSheetOpen] = useState(false);
 
   const [settings, setSettings] = useLocalStorage(APP_SETTINGS_KEY, {
     fullDayHours: "8",
@@ -417,20 +418,22 @@ export default function Home() {
     <div className="flex flex-col h-screen overflow-hidden p-4 sm:p-6 bg-gradient-to-br from-background via-secondary/20 to-background">
       <WelcomeDialog open={isWelcomeDialogOpen} onOpenChange={setIsWelcomeDialogOpen} />
 
-      <header className="w-full max-w-7xl flex justify-between items-center mb-4 mx-auto flex-none">
-        <h1 className="text-3xl sm:text-4xl font-bold font-headline text-primary">TimeWise</h1>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <AboutSheet />
-        </div>
-      </header>
+      <Tabs defaultValue="mewurk" className="h-full flex flex-col">
+        <header className="w-full max-w-7xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 mx-auto flex-none">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold font-headline text-primary whitespace-nowrap">TimeWise</h1>
+            <TabsList className="grid grid-cols-2 w-full sm:w-auto">
+              <TabsTrigger value="tracker" className="text-xs sm:text-sm">Manual Time Tracker</TabsTrigger>
+              <TabsTrigger value="mewurk" className="text-xs sm:text-sm">Mewurk Logs</TabsTrigger>
+            </TabsList>
+          </div>
+          <div className="flex items-center gap-2 self-stretch sm:self-auto">
+            <ThemeToggle />
+            <AboutSheet isOpen={isAboutSheetOpen} onOpenChange={setIsAboutSheetOpen} />
+          </div>
+        </header>
 
-      <main className="w-full max-w-7xl mx-auto flex flex-col gap-6 flex-1 min-h-0">
-        <Tabs defaultValue="mewurk" className="h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="tracker">Manual Time Tracker</TabsTrigger>
-            <TabsTrigger value="mewurk">Mewurk Logs</TabsTrigger>
-          </TabsList>
+        <main className="w-full max-w-7xl mx-auto flex flex-col gap-6 flex-1 min-h-0">
 
           <TabsContent
             value="tracker"
@@ -494,8 +497,8 @@ export default function Home() {
               }}
             />
           </TabsContent>
-        </Tabs>
-      </main>
+        </main>
+      </Tabs>
 
       <footer className="w-full max-w-7xl mx-auto text-center pt-4 pb-2 flex-none">
         <p className="text-sm text-muted-foreground px-4 sm:px-6">
@@ -517,9 +520,17 @@ export default function Home() {
           >
             open source
           </a>
-          )
+          ){" "}
+          <span className="text-muted-foreground">•</span>{" "}
+          <button
+            onClick={() => setIsAboutSheetOpen(true)}
+            className="font-semibold text-primary hover:underline transition-colors"
+          >
+            More
+          </button>
         </p>
       </footer>
+
     </div>
   );
 }

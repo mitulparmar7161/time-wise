@@ -330,9 +330,6 @@ export function MewurkLogs({ targetHours, targetMinutes, onSettingsChange }: Mew
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-                {theme === "dark" ? <Icons.Sun className="h-4 w-4" /> : <Icons.Moon className="h-4 w-4" />}
-              </Button>
             </>
           )}
           <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
