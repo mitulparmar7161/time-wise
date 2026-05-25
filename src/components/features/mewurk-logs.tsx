@@ -254,9 +254,66 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
     if (!data || !data.clockInDetails.length) return null;
 
     // Sort logs by time (Oldest -> Newest) to ensure accurate sequence
-    const logs = [...data.clockInDetails].sort((a, b) => {
+    const rawLogs = [...data.clockInDetails].sort((a, b) => {
       return new Date(a.clockTime).getTime() - new Date(b.clockTime).getTime();
     });
+
+    // Create a copy where we keep original inOutType for display and resolve inOutType to IN / OUT
+    const logs = rawLogs.map((log) => ({
+      ...log,
+      originalInOutType: log.inOutType,
+    }));
+
+    for (let i = 0; i < logs.length; i++) {
+      const type = logs[i].inOutType;
+      if (type === "AUTO" || type === "AUTO_OUT" || type === "AUTO-OUT") {
+        const prev = i > 0 ? logs[i - 1].inOutType : null;
+        const next = i < logs.length - 1 ? logs[i + 1].inOutType : null;
+
+        const prevIsOut =
+          i > 0 &&
+          (logs[i - 1].inOutType === "OUT" ||
+            logs[i - 1].inOutType === "AUTO" ||
+            logs[i - 1].inOutType === "AUTO_OUT" ||
+            logs[i - 1].inOutType === "AUTO-OUT");
+        const nextIsOut =
+          i < logs.length - 1 &&
+          (logs[i + 1].inOutType === "OUT" ||
+            logs[i + 1].inOutType === "AUTO" ||
+            logs[i + 1].inOutType === "AUTO_OUT" ||
+            logs[i + 1].inOutType === "AUTO-OUT");
+
+        const prevIsIn = i > 0 && logs[i - 1].inOutType === "IN";
+        const nextIsIn = i < logs.length - 1 && logs[i + 1].inOutType === "IN";
+
+        // 1. "if last and next is out than the auto status is probabbly in"
+        if (prevIsOut && nextIsOut) {
+          logs[i].inOutType = "IN";
+        }
+        // 2. if prev and next are both IN, this AUTO is OUT
+        else if (prevIsIn && nextIsIn) {
+          logs[i].inOutType = "OUT";
+        }
+        // 3. if first entry and next is OUT, it is IN
+        else if (prev === null && nextIsOut) {
+          logs[i].inOutType = "IN";
+        }
+        // 4. if last entry and prev is OUT, it is IN
+        else if (prevIsOut && next === null) {
+          logs[i].inOutType = "IN";
+        }
+        // 5. if last entry and prev is IN, it is OUT
+        else if (prevIsIn && next === null) {
+          logs[i].inOutType = "OUT";
+        }
+        // Fallbacks
+        else if (prevIsIn) {
+          logs[i].inOutType = "OUT";
+        } else {
+          logs[i].inOutType = "IN";
+        }
+      }
+    }
 
     const firstPunch = logs.find((l) => isPunchIn(l.inOutType));
     const lastPunch = logs[logs.length - 1];
@@ -384,6 +441,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
       targetHours: calculatedTargetHours,
       targetMinutes: calculatedTargetMinutes,
       isDefaultAndMissing: !usedShiftTimes,
+      resolvedLogs: logs,
     };
   }, [data, currentTime]);
 
@@ -832,10 +890,22 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
               </CardHeader>
               <CardContent className="flex-1 min-h-0 p-0 overflow-hidden relative">
                 <ScrollArea className="h-full w-full p-0">
-                  {data.clockInDetails.length > 0 ? (
+                  {stats.resolvedLogs && stats.resolvedLogs.length > 0 ? (
                     <div className="divide-y divide-border/40">
-                      {data.clockInDetails.map((log, index) => {
+                      {stats.resolvedLogs.map((log, index) => {
                         const logTime = parseUtc(log.clockTime);
+                        const isAuto =
+                          log.originalInOutType === "AUTO" ||
+                          log.originalInOutType === "AUTO_OUT" ||
+                          log.originalInOutType === "AUTO-OUT";
+                        const displayStatus = isAuto
+                          ? log.inOutType === "IN"
+                            ? "Auto In"
+                            : "Auto Out"
+                          : log.inOutType === "IN"
+                            ? "Walk In"
+                            : "Walk Out";
+
                         return (
                           <div
                             key={index}
@@ -844,12 +914,12 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                             <div className="flex items-center gap-3">
                               <div
                                 className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center shadow-sm border ${
-                                  isPunchIn(log.inOutType)
+                                  log.inOutType === "IN"
                                     ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
                                     : "bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400"
                                 }`}
                               >
-                                {isPunchIn(log.inOutType) ? (
+                                {log.inOutType === "IN" ? (
                                   <Icons.LogIn className="h-4 w-4" />
                                 ) : (
                                   <Icons.LogOut className="h-4 w-4" />
@@ -857,9 +927,9 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                               </div>
                               <div className="flex flex-col min-w-0">
                                 <span
-                                  className={`font-bold text-sm sm:text-base truncate ${isPunchIn(log.inOutType) ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"}`}
+                                  className={`font-bold text-sm sm:text-base truncate ${log.inOutType === "IN" ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"}`}
                                 >
-                                  {getStatusLabel(log.inOutType)}
+                                  {displayStatus}
                                 </span>
                                 <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5 truncate">
                                   <Icons.MapPin className="h-3.5 w-3.5 shrink-0" />
