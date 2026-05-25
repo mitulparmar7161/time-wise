@@ -1,33 +1,36 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { format, differenceInMilliseconds, isSameDay, isValid } from "date-fns";
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
+
+import { differenceInMilliseconds, format, isSameDay, isValid } from "date-fns";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import {
+  getAttendanceLogsAction,
+  getCardDetailsAction,
+  getInitialAuthStateAction,
+  loginAction,
+  logoutAction,
+  refreshSessionAction,
+} from "@/app/actions";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Icons } from "@/components/ui/icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Icons } from "@/components/ui/icons";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { AttendanceData, CardDetailsResponse } from "@/services/mewurk";
-import {
-  loginAction,
-  logoutAction,
-  getAttendanceLogsAction,
-  getCardDetailsAction,
-  refreshSessionAction,
-  getInitialAuthStateAction,
-} from "@/app/actions";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { AttendanceData, CardDetailsResponse } from "@/services/mewurk";
 
 interface MewurkLogsProps {
   targetHours: number;
@@ -235,6 +238,18 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
     return new Date(dateStr);
   };
 
+  const isPunchIn = (type: string) => type === "IN";
+
+  const isPunchOut = (type: string) =>
+    type === "OUT" || type === "AUTO" || type === "AUTO_OUT" || type === "AUTO-OUT";
+
+  const getStatusLabel = (type: string) => {
+    if (type === "IN") return "Walk In";
+    if (type === "OUT") return "Walk Out";
+    if (type === "AUTO" || type === "AUTO_OUT" || type === "AUTO-OUT") return "Auto Out";
+    return type;
+  };
+
   const stats = useMemo(() => {
     if (!data || !data.clockInDetails.length) return null;
 
@@ -243,7 +258,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
       return new Date(a.clockTime).getTime() - new Date(b.clockTime).getTime();
     });
 
-    const firstPunch = logs.find((l) => l.inOutType === "IN");
+    const firstPunch = logs.find((l) => isPunchIn(l.inOutType));
     const lastPunch = logs[logs.length - 1];
 
     let actualCompletionTime: Date | null = null;
@@ -284,8 +299,8 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
       const next = logs[i + 1];
       const currentDate = parseUtc(current.clockTime);
 
-      if (current.inOutType === "IN") {
-        if (next && next.inOutType === "OUT") {
+      if (isPunchIn(current.inOutType)) {
+        if (next && isPunchOut(next.inOutType)) {
           // Completed session
           const nextDate = parseUtc(next.clockTime);
           const sessionDuration = differenceInMilliseconds(nextDate, currentDate);
@@ -326,9 +341,9 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
       const next = logs[i + 1];
       const currentDate = parseUtc(current.clockTime);
 
-      if (current.inOutType === "OUT") {
+      if (isPunchOut(current.inOutType)) {
         // Check for break
-        if (next && next.inOutType === "IN") {
+        if (next && isPunchIn(next.inOutType)) {
           const nextDate = parseUtc(next.clockTime);
           breakCount++;
           totalBreakMs += differenceInMilliseconds(nextDate, currentDate);
@@ -358,7 +373,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
     return {
       firstPunchTime: firstPunch ? parseUtc(firstPunch.clockTime) : null,
       lastActivityTime: lastPunch ? parseUtc(lastPunch.clockTime) : null,
-      isWorking: lastPunch?.inOutType === "IN",
+      isWorking: lastPunch ? isPunchIn(lastPunch.inOutType) : false,
       totalWorkMs,
       totalBreakMs,
       breakCount,
@@ -829,12 +844,12 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                             <div className="flex items-center gap-3">
                               <div
                                 className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center shadow-sm border ${
-                                  log.inOutType === "IN"
+                                  isPunchIn(log.inOutType)
                                     ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
                                     : "bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400"
                                 }`}
                               >
-                                {log.inOutType === "IN" ? (
+                                {isPunchIn(log.inOutType) ? (
                                   <Icons.LogIn className="h-4 w-4" />
                                 ) : (
                                   <Icons.LogOut className="h-4 w-4" />
@@ -842,9 +857,9 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                               </div>
                               <div className="flex flex-col min-w-0">
                                 <span
-                                  className={`font-bold text-sm sm:text-base truncate ${log.inOutType === "IN" ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"}`}
+                                  className={`font-bold text-sm sm:text-base truncate ${isPunchIn(log.inOutType) ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"}`}
                                 >
-                                  {log.inOutType === "IN" ? "Walk In" : "Walk Out"}
+                                  {getStatusLabel(log.inOutType)}
                                 </span>
                                 <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5 truncate">
                                   <Icons.MapPin className="h-3.5 w-3.5 shrink-0" />
