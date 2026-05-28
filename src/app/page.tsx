@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps */
-
 import {
   differenceInHours,
   differenceInMilliseconds,
@@ -15,13 +13,13 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AboutSheet } from "@/components/features/about-sheet";
 import { MewurkLogs } from "@/components/features/mewurk-logs";
+import { ThanksDialog } from "@/components/features/thanks-dialog";
 import { TimeTrackerCards } from "@/components/features/time-tracker-cards";
 import { WelcomeDialog } from "@/components/features/welcome-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useToast } from "@/hooks/use-toast";
-
 const APP_SETTINGS_KEY = "timewiseSettings";
 const APP_SESSION_KEY = "timewiseSession";
 
@@ -64,7 +62,26 @@ export default function Home() {
   });
 
   const [isWelcomeDialogOpen, setIsWelcomeDialogOpen] = useState(false);
+  const [isThanksDialogOpen, setIsThanksDialogOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  const mewurkLogsTab = useMemo(
+    () => (
+      <MewurkLogs
+        targetHours={Number(settings.fullDayHours) || 8}
+        targetMinutes={Number(settings.fullDayMinutes) || 0}
+        onSettingsChange={(hours, minutes) => {
+          setSettings((prev) => ({
+            ...prev,
+            fullDayHours: hours,
+            fullDayMinutes: minutes,
+          }));
+          toast({ title: "Updated", description: "Work duration settings updated." });
+        }}
+      />
+    ),
+    [settings.fullDayHours, settings.fullDayMinutes, setSettings, toast]
+  );
 
   useEffect(() => {
     setIsClient(true);
@@ -94,6 +111,13 @@ export default function Home() {
       if (!sessionState.startTime) {
         startNewSession(); // Initialize
       }
+    }
+
+    // Check for one-time thanks dialog
+    const hasSeenThanks = localStorage.getItem("timewise_seen_thanks_fix");
+    if (!hasSeenThanks) {
+      setIsThanksDialogOpen(true);
+      localStorage.setItem("timewise_seen_thanks_fix", "true");
     }
   }, []); // Run once on mount
 
@@ -418,6 +442,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen overflow-hidden p-4 sm:p-6 bg-gradient-to-br from-background via-secondary/20 to-background">
       <WelcomeDialog open={isWelcomeDialogOpen} onOpenChange={setIsWelcomeDialogOpen} />
+      <ThanksDialog open={isThanksDialogOpen} onOpenChange={setIsThanksDialogOpen} />
 
       <header className="w-full max-w-7xl flex justify-between items-center mb-4 mx-auto flex-none">
         <h1 className="text-3xl sm:text-4xl font-bold font-headline text-primary">TimeWise</h1>
@@ -483,10 +508,7 @@ export default function Home() {
             value="mewurk"
             className="h-full mt-0 flex-1 min-h-0 data-[state=active]:flex data-[state=active]:flex-col"
           >
-            <MewurkLogs
-              targetHours={Number(settings.fullDayHours) || 8}
-              targetMinutes={Number(settings.fullDayMinutes) || 0}
-            />
+            {mewurkLogsTab}
           </TabsContent>
         </Tabs>
       </main>

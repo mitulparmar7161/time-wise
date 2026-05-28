@@ -1,8 +1,7 @@
 "use client";
 
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
-
 import { differenceInMilliseconds, format, isSameDay, isValid } from "date-fns";
+import { Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -32,10 +31,22 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { AttendanceData, CardDetailsResponse } from "@/services/mewurk";
 
+import { EmployeeSearch } from "./employee-search";
+
 interface MewurkLogsProps {
   targetHours: number;
   targetMinutes: number;
+  onSettingsChange?: (hours: string, minutes: string) => void;
 }
+
+type MonthStats = CardDetailsResponse["data"]["cardDetails"];
+
+interface CachedMewurkLogs {
+  data: AttendanceData | null;
+  monthStats: MonthStats | null;
+}
+
+const MEWURK_LOGS_CACHE_PREFIX = "mewurk_logs_cache";
 
 export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
   const { toast } = useToast();
@@ -44,8 +55,6 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
   const [token, setToken] = useState<string | null>(null);
   const [employeeCode, setEmployeeCode] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
-
-  // Settings State - temp variables removed as they were not used in the template anymore
 
   // Login Form State
   const [email, setEmail] = useState("");
@@ -56,9 +65,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
   // Data State
   const [date, setDate] = useState(new Date());
   const [data, setData] = useState<AttendanceData | null>(null);
-  const [monthStats, setMonthStats] = useState<CardDetailsResponse["data"]["cardDetails"] | null>(
-    null
-  );
+  const [monthStats, setMonthStats] = useState<MonthStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +74,31 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
 
   // UI State
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [activeView, setActiveView] = useState<"my-logs" | "search">("my-logs");
+
+  const getLogsCacheKey = useCallback(
+    (selectedDate: Date, code: string) =>
+      `${MEWURK_LOGS_CACHE_PREFIX}:${code}:${format(selectedDate, "yyyy-MM-dd")}`,
+    []
+  );
+
+  const readCachedLogs = useCallback((cacheKey: string): CachedMewurkLogs | null => {
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      return cached ? (JSON.parse(cached) as CachedMewurkLogs) : null;
+    } catch (e) {
+      console.error("Mewurk logs cache parsing error", e);
+      return null;
+    }
+  }, []);
+
+  const writeCachedLogs = useCallback((cacheKey: string, value: CachedMewurkLogs) => {
+    try {
+      sessionStorage.setItem(cacheKey, JSON.stringify(value));
+    } catch (e) {
+      console.error("Mewurk logs cache write error", e);
+    }
+  }, []);
 
   // Load auth from cookies on mount
   useEffect(() => {
@@ -137,6 +169,9 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
 
   const handleLogout = useCallback(async () => {
     await logoutAction();
+    Object.keys(sessionStorage)
+      .filter((key) => key.startsWith(MEWURK_LOGS_CACHE_PREFIX))
+      .forEach((key) => sessionStorage.removeItem(key));
     setToken(null);
     setEmployeeCode(null);
     setUserName(null);
@@ -147,6 +182,16 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
   const fetchLogs = useCallback(async () => {
     if (!token || !employeeCode) return;
 
+    const cacheKey = getLogsCacheKey(date, employeeCode);
+    const cached = readCachedLogs(cacheKey);
+    if (cached) {
+      setData(cached.data);
+      setMonthStats(cached.monthStats);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -154,14 +199,19 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
       const formattedDate = format(date, "yyyy-MM-dd");
       const year = date.getFullYear();
       const month = date.getMonth() + 1; // 1-indexed for API
+      let nextData: AttendanceData | null = null;
+      let nextMonthStats: MonthStats | null = null;
+      let shouldCache = false;
 
       const [logsRes, statsRes] = await Promise.all([
         getAttendanceLogsAction(formattedDate),
         getCardDetailsAction(year, month),
       ]);
 
-      if (logsRes.isSuccess) {
-        setData(logsRes.data);
+      if (logsRes.isSuccess && "data" in logsRes) {
+        nextData = logsRes.data;
+        shouldCache = true;
+        setData(nextData);
       } else {
         if (logsRes.statusCode === 401) {
           // Try to refresh token
@@ -182,8 +232,9 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
         setError(logsRes.message || "Failed to fetch logs");
       }
 
-      if (statsRes.isSuccess) {
-        setMonthStats(statsRes.data.cardDetails);
+      if (statsRes.isSuccess && "data" in statsRes) {
+        nextMonthStats = statsRes.data.cardDetails;
+        setMonthStats(nextMonthStats);
       } else {
         console.error("Failed to fetch month stats:", statsRes.message);
         if (statsRes.statusCode === 401) {
@@ -195,6 +246,10 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
           });
           return;
         }
+      }
+
+      if (shouldCache) {
+        writeCachedLogs(cacheKey, { data: nextData, monthStats: nextMonthStats });
       }
     } catch (err: unknown) {
       console.error("Fetch error:", err);
@@ -212,7 +267,17 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
     } finally {
       setLoading(false);
     }
-  }, [date, token, employeeCode, refreshSession, handleLogout, toast]);
+  }, [
+    date,
+    token,
+    employeeCode,
+    getLogsCacheKey,
+    readCachedLogs,
+    refreshSession,
+    handleLogout,
+    toast,
+    writeCachedLogs,
+  ]);
 
   useEffect(() => {
     if (token && employeeCode) {
@@ -228,7 +293,6 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
       return new Date(dateStr + "Z");
     }
     // If custom format "MM/dd/yyyy HH:mm:ss", parse manually as UTC
-    // e.g. "02/06/2026 10:31:00"
     if (dateStr.match(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}$/)) {
       const [datePart, timePart] = dateStr.split(" ");
       const [month, day, year] = datePart.split("/");
@@ -238,98 +302,24 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
     return new Date(dateStr);
   };
 
-  const isPunchIn = (type: string) => type === "IN";
-
-  const isPunchOut = (type: string) =>
-    type === "OUT" || type === "AUTO" || type === "AUTO_OUT" || type === "AUTO-OUT";
-
-  const getStatusLabel = (type: string) => {
-    if (type === "IN") return "Walk In";
-    if (type === "OUT") return "Walk Out";
-    if (type === "AUTO" || type === "AUTO_OUT" || type === "AUTO-OUT") return "Auto Out";
-    return type;
-  };
-
   const stats = useMemo(() => {
     if (!data || !data.clockInDetails.length) return null;
 
-    // Sort logs by time (Oldest -> Newest) to ensure accurate sequence
-    const rawLogs = [...data.clockInDetails].sort((a, b) => {
+    const logs = [...data.clockInDetails].sort((a, b) => {
       return new Date(a.clockTime).getTime() - new Date(b.clockTime).getTime();
     });
 
-    // Create a copy where we keep original inOutType for display and resolve inOutType to IN / OUT
-    const logs = rawLogs.map((log) => ({
-      ...log,
-      originalInOutType: log.inOutType,
-    }));
-
-    for (let i = 0; i < logs.length; i++) {
-      const type = logs[i].inOutType;
-      if (type === "AUTO" || type === "AUTO_OUT" || type === "AUTO-OUT") {
-        const prev = i > 0 ? logs[i - 1].inOutType : null;
-        const next = i < logs.length - 1 ? logs[i + 1].inOutType : null;
-
-        const prevIsOut =
-          i > 0 &&
-          (logs[i - 1].inOutType === "OUT" ||
-            logs[i - 1].inOutType === "AUTO" ||
-            logs[i - 1].inOutType === "AUTO_OUT" ||
-            logs[i - 1].inOutType === "AUTO-OUT");
-        const nextIsOut =
-          i < logs.length - 1 &&
-          (logs[i + 1].inOutType === "OUT" ||
-            logs[i + 1].inOutType === "AUTO" ||
-            logs[i + 1].inOutType === "AUTO_OUT" ||
-            logs[i + 1].inOutType === "AUTO-OUT");
-
-        const prevIsIn = i > 0 && logs[i - 1].inOutType === "IN";
-        const nextIsIn = i < logs.length - 1 && logs[i + 1].inOutType === "IN";
-
-        // 1. "if last and next is out than the auto status is probabbly in"
-        if (prevIsOut && nextIsOut) {
-          logs[i].inOutType = "IN";
-        }
-        // 2. if prev and next are both IN, this AUTO is OUT
-        else if (prevIsIn && nextIsIn) {
-          logs[i].inOutType = "OUT";
-        }
-        // 3. if first entry and next is OUT, it is IN
-        else if (prev === null && nextIsOut) {
-          logs[i].inOutType = "IN";
-        }
-        // 4. if last entry and prev is OUT, it is IN
-        else if (prevIsOut && next === null) {
-          logs[i].inOutType = "IN";
-        }
-        // 5. if last entry and prev is IN, it is OUT
-        else if (prevIsIn && next === null) {
-          logs[i].inOutType = "OUT";
-        }
-        // Fallbacks
-        else if (prevIsIn) {
-          logs[i].inOutType = "OUT";
-        } else {
-          logs[i].inOutType = "IN";
-        }
-      }
-    }
-
-    const firstPunch = logs.find((l) => isPunchIn(l.inOutType));
+    const firstPunch = logs.find((l) => l.inOutType === "IN");
     const lastPunch = logs[logs.length - 1];
 
     let actualCompletionTime: Date | null = null;
     let accumulatedWorkMs = 0;
     let targetMet = false;
 
-    // Variables for break calculation
     let totalWorkMs = 0;
     let totalBreakMs = 0;
     let breakCount = 0;
 
-    // Calculate Shift Duration
-    // Priority 1: Calculate from API provided shift times
-    // Priority 2: Default to 8 hours 15 minutes (29700000 ms)
     let shiftTotalMs = 29700000; // Default 8h 15m
     let usedShiftTimes = false;
 
@@ -350,21 +340,18 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
       }
     }
 
-    // First pass: Calculate accurate completion time based on logs
     for (let i = 0; i < logs.length; i++) {
       const current = logs[i];
       const next = logs[i + 1];
       const currentDate = parseUtc(current.clockTime);
 
-      if (isPunchIn(current.inOutType)) {
-        if (next && isPunchOut(next.inOutType)) {
-          // Completed session
+      if (current.inOutType === "IN") {
+        if (next && next.inOutType === "OUT") {
           const nextDate = parseUtc(next.clockTime);
           const sessionDuration = differenceInMilliseconds(nextDate, currentDate);
 
           if (!targetMet) {
             if (accumulatedWorkMs + sessionDuration >= shiftTotalMs) {
-              // Target met during this session
               const remainingToTarget = shiftTotalMs - accumulatedWorkMs;
               actualCompletionTime = new Date(currentDate.getTime() + remainingToTarget);
               targetMet = true;
@@ -372,12 +359,10 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
           }
           accumulatedWorkMs += sessionDuration;
         } else if (!next && isSameDay(currentDate, currentTime)) {
-          // Ongoing session (if today)
           const sessionDuration = differenceInMilliseconds(currentTime, currentDate);
 
           if (!targetMet) {
             if (accumulatedWorkMs + sessionDuration >= shiftTotalMs) {
-              // Target met just now/during current session
               const remainingToTarget = shiftTotalMs - accumulatedWorkMs;
               actualCompletionTime = new Date(currentDate.getTime() + remainingToTarget);
               targetMet = true;
@@ -388,19 +373,13 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
       }
     }
 
-    // Calculate breaks (separate loop or logic, reused from existing but kept clean)
-    // We need total work and break stats regardless of when target was met
-    // The loop above calculated accumulatedWorkMs correctly for total work including overtime
-
-    // But we need to ensure we count breaks correctly too
     for (let i = 0; i < logs.length; i++) {
       const current = logs[i];
       const next = logs[i + 1];
       const currentDate = parseUtc(current.clockTime);
 
-      if (isPunchOut(current.inOutType)) {
-        // Check for break
-        if (next && isPunchIn(next.inOutType)) {
+      if (current.inOutType === "OUT") {
+        if (next && next.inOutType === "IN") {
           const nextDate = parseUtc(next.clockTime);
           breakCount++;
           totalBreakMs += differenceInMilliseconds(nextDate, currentDate);
@@ -408,29 +387,21 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
       }
     }
 
-    totalWorkMs = accumulatedWorkMs; // Assign to the returned var
+    totalWorkMs = accumulatedWorkMs;
 
     const remainingMs = shiftTotalMs - totalWorkMs;
     const progress = Math.min(100, (totalWorkMs / shiftTotalMs) * 100);
 
-    // If we haven't met target, Estimated is moving. If we met it, it's fixed.
-    // actually, estimatedEndTime is mainly for "When WILL I finish".
-    // actualCompletionTime is "When DID I finish".
-    // We can unify this:
-    // If targetMet, use actualCompletionTime.
-    // If not met, use currentTime + remaining.
-
     const effectiveCompletionTime =
       actualCompletionTime || new Date(currentTime.getTime() + remainingMs);
 
-    // Calculate target hours/mins for display
     const calculatedTargetHours = Math.floor(shiftTotalMs / (1000 * 60 * 60));
     const calculatedTargetMinutes = Math.floor((shiftTotalMs % (1000 * 60 * 60)) / (1000 * 60));
 
     return {
       firstPunchTime: firstPunch ? parseUtc(firstPunch.clockTime) : null,
       lastActivityTime: lastPunch ? parseUtc(lastPunch.clockTime) : null,
-      isWorking: lastPunch ? isPunchIn(lastPunch.inOutType) : false,
+      isWorking: lastPunch?.inOutType === "IN",
       totalWorkMs,
       totalBreakMs,
       breakCount,
@@ -441,7 +412,6 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
       targetHours: calculatedTargetHours,
       targetMinutes: calculatedTargetMinutes,
       isDefaultAndMissing: !usedShiftTimes,
-      resolvedLogs: logs,
     };
   }, [data, currentTime]);
 
@@ -548,9 +518,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
     <div className="flex flex-col gap-4 h-full font-sans overflow-hidden">
       {/* Header Badge */}
       <Card className="flex-none shadow-md border-primary/20 bg-gradient-to-r from-card via-card to-primary/5 overflow-hidden relative">
-        <div className="absolute top-0 right-0 p-3 opacity-5">
-          <Icons.Briefcase className="w-32 h-32 -mr-8 -mt-8" />
-        </div>
+        <div className="absolute top-0 right-0 p-3 opacity-5 display-none"></div>
         <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
@@ -572,36 +540,64 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-1 sm:flex-none">
-              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full sm:w-[240px] justify-start text-left font-normal bg-background/80",
-                      !date && "text-muted-foreground"
-                    )}
-                  >
-                    <Icons.Calendar className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={(newDate) => {
-                      if (newDate) {
-                        setDate(newDate);
-                        setIsCalendarOpen(false);
-                      }
-                    }}
-                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+            {/* Toggle Button to swap views */}
+            <Button
+              variant={activeView === "search" ? "secondary" : "default"}
+              className={cn(
+                "h-10 shrink-0 gap-2 px-4 font-semibold transition-colors",
+                activeView === "search" && "border border-primary/30 bg-primary/20 text-primary"
+              )}
+              onClick={() => setActiveView(activeView === "search" ? "my-logs" : "search")}
+              title={activeView === "search" ? "View My Logs" : "Search Employees"}
+            >
+              {activeView === "search" ? (
+                <>
+                  <Icons.Clock className="h-4 w-4" />
+                  <span className="text-sm">My Logs</span>
+                </>
+              ) : (
+                <>
+                  <Search className="h-4 w-4" />
+                  <span className="text-sm">Search Employees</span>
+                </>
+              )}
+            </Button>
+
+            {/* Calendar only visible when on My Logs */}
+            {activeView === "my-logs" && (
+              <div className="relative flex-1 sm:flex-none">
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full sm:w-[240px] justify-start text-left font-normal bg-background/80",
+                        !date && "text-muted-foreground"
+                      )}
+                    >
+                      <Icons.Calendar className="mr-2 h-4 w-4" />
+                      {date ? format(date, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={(newDate) => {
+                        if (newDate) {
+                          setDate(newDate);
+                          setIsCalendarOpen(false);
+                        }
+                      }}
+                      disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+
+            {/* Logout Button */}
             <Button
               variant="outline"
               size="icon"
@@ -615,8 +611,12 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
         </CardContent>
       </Card>
 
-      {/* Content */}
-      {loading ? (
+      {/* Main Content Render */}
+      {activeView === "search" ? (
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+          <EmployeeSearch targetHours={targetHours} targetMinutes={targetMinutes} token={token} />
+        </div>
+      ) : loading ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 text-muted-foreground animate-in fade-in duration-500">
           <div className="relative">
             <Icons.Loader className="h-10 w-10 animate-spin text-primary" />
@@ -890,22 +890,10 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
               </CardHeader>
               <CardContent className="flex-1 min-h-0 p-0 overflow-hidden relative">
                 <ScrollArea className="h-full w-full p-0">
-                  {stats.resolvedLogs && stats.resolvedLogs.length > 0 ? (
+                  {data.clockInDetails.length > 0 ? (
                     <div className="divide-y divide-border/40">
-                      {stats.resolvedLogs.map((log, index) => {
+                      {data.clockInDetails.map((log, index) => {
                         const logTime = parseUtc(log.clockTime);
-                        const isAuto =
-                          log.originalInOutType === "AUTO" ||
-                          log.originalInOutType === "AUTO_OUT" ||
-                          log.originalInOutType === "AUTO-OUT";
-                        const displayStatus = isAuto
-                          ? log.inOutType === "IN"
-                            ? "Auto In"
-                            : "Auto Out"
-                          : log.inOutType === "IN"
-                            ? "Walk In"
-                            : "Walk Out";
-
                         return (
                           <div
                             key={index}
@@ -929,7 +917,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                                 <span
                                   className={`font-bold text-sm sm:text-base truncate ${log.inOutType === "IN" ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"}`}
                                 >
-                                  {displayStatus}
+                                  {log.inOutType === "IN" ? "Walk In" : "Walk Out"}
                                 </span>
                                 <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5 truncate">
                                   <Icons.MapPin className="h-3.5 w-3.5 shrink-0" />
