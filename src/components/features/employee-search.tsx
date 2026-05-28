@@ -23,10 +23,7 @@ import {
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getAllEmployeesAction, getEmployeeFullDataAction } from "@/app/actions";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Icons } from "@/components/ui/icons";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -37,13 +34,14 @@ interface EmployeeSearchProps {
   targetHours?: number;
   targetMinutes?: number;
   token?: string | null;
+  date: Date;
 }
 
 const MAX_SEARCH_RESULTS = 8;
 
 type MonthStats = CardDetailsResponse["data"]["cardDetails"];
 
-export function EmployeeSearch({ token = null }: EmployeeSearchProps) {
+export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
   const { toast } = useToast();
 
   const [query, setQuery] = useState("");
@@ -63,8 +61,6 @@ export function EmployeeSearch({ token = null }: EmployeeSearchProps) {
   const sidebarInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeSearchResult | null>(null);
-  const [date, setDate] = useState(new Date());
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const [attendanceData, setAttendanceData] = useState<AttendanceData | null>(null);
   const [monthStats, setMonthStats] = useState<MonthStats | null>(null);
@@ -231,29 +227,11 @@ export function EmployeeSearch({ token = null }: EmployeeSearchProps) {
     setSearchOpen(false);
     setAttendanceData(null);
     setMonthStats(null);
-    setLoadingData(true);
-    getEmployeeFullDataAction(
-      format(date, "yyyy-MM-dd"),
-      String(emp.employeeCode),
-      date.getFullYear(),
-      date.getMonth() + 1
-    )
-      .then((res) => {
-        setAttendanceData(res.logs ?? null);
-        setMonthStats(res.stats ?? null);
-      })
-      .catch(() => {
-        toast({ title: "Error", description: "Failed to fetch data", variant: "destructive" });
-      })
-      .finally(() => setLoadingData(false));
   };
 
-  const handleDateChange = (newDate: Date | undefined) => {
-    if (!newDate) return;
-    setDate(newDate);
-    setIsCalendarOpen(false);
-    if (selectedEmployee) fetchEmployeeData(selectedEmployee, newDate);
-  };
+  useEffect(() => {
+    if (selectedEmployee) fetchEmployeeData(selectedEmployee, date);
+  }, [date, selectedEmployee, fetchEmployeeData]);
 
   const handleSearchReset = () => {
     setQuery("");
@@ -409,7 +387,8 @@ export function EmployeeSearch({ token = null }: EmployeeSearchProps) {
           Only visible when token exists
       ══════════════════════════════════════ */}
       <div className="flex-none px-1 pb-4">
-        <div ref={sidebarSearchRef} className="relative">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div ref={sidebarSearchRef} className="relative flex-1">
           {/* ── Collapsed: icon button ── */}
           {!searchOpen && (
             <button
@@ -568,6 +547,7 @@ export function EmployeeSearch({ token = null }: EmployeeSearchProps) {
               )}
             </div>
           )}
+          </div>
         </div>
       </div>
 
@@ -644,30 +624,6 @@ export function EmployeeSearch({ token = null }: EmployeeSearchProps) {
                   </span>
                 )}
               </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {/* Date picker */}
-              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="h-8 px-3 rounded-lg border-border/60 bg-card shrink-0 gap-1.5 font-normal text-xs"
-                  >
-                    <CalendarDays className="h-3.5 w-3.5 text-primary" />
-                    <span className="hidden sm:inline">{format(date, "dd MMM yyyy")}</span>
-                    <span className="sm:hidden">{format(date, "dd MMM")}</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={handleDateChange}
-                    disabled={(d) => d > new Date() || d < new Date("1900-01-01")}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
             </div>
           </div>
 

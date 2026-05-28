@@ -563,39 +563,36 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
               )}
             </Button>
 
-            {/* Calendar only visible when on My Logs */}
-            {activeView === "my-logs" && (
-              <div className="relative flex-1 sm:flex-none">
-                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full sm:w-[240px] justify-start text-left font-normal bg-background/80",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <Icons.Calendar className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={(newDate) => {
-                        if (newDate) {
-                          setDate(newDate);
-                          setIsCalendarOpen(false);
-                        }
-                      }}
-                      disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
+            <div className="relative flex-1 sm:flex-none">
+              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full sm:w-[240px] justify-start text-left font-normal bg-background/80",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <Icons.Calendar className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={(newDate) => {
+                      if (newDate) {
+                        setDate(newDate);
+                        setIsCalendarOpen(false);
+                      }
+                    }}
+                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
 
             {/* Logout Button */}
             <Button
@@ -614,7 +611,12 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
       {/* Main Content Render */}
       {activeView === "search" ? (
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-300">
-          <EmployeeSearch targetHours={targetHours} targetMinutes={targetMinutes} token={token} />
+          <EmployeeSearch
+            targetHours={targetHours}
+            targetMinutes={targetMinutes}
+            token={token}
+            date={date}
+          />
         </div>
       ) : loading ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 text-muted-foreground animate-in fade-in duration-500">
