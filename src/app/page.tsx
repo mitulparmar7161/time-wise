@@ -11,6 +11,7 @@ import {
   set,
   subDays,
 } from "date-fns";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 
 import { AboutSheet } from "@/components/features/about-sheet";
@@ -18,7 +19,7 @@ import { MewurkLogs } from "@/components/features/mewurk-logs";
 import { TimeTrackerCards } from "@/components/features/time-tracker-cards";
 import { WelcomeDialog } from "@/components/features/welcome-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Icons } from "@/components/ui/icons";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useToast } from "@/hooks/use-toast";
 
@@ -65,6 +66,7 @@ export default function Home() {
 
   const [isWelcomeDialogOpen, setIsWelcomeDialogOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [activeTab, setActiveTab] = useState<"mewurk" | "tracker">("mewurk");
 
   useEffect(() => {
     setIsClient(true);
@@ -125,7 +127,6 @@ export default function Home() {
       timestamp: startTime.toISOString(),
       message: "Punched In",
     };
-
     setSessionState({
       sessionDate: todayStr,
       startTime: startTime.toISOString(),
@@ -416,104 +417,145 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden p-4 sm:p-6 bg-gradient-to-br from-background via-secondary/20 to-background">
+    <div className="flex h-screen w-screen overflow-hidden font-sans antialiased">
       <WelcomeDialog open={isWelcomeDialogOpen} onOpenChange={setIsWelcomeDialogOpen} />
 
-      <header className="w-full max-w-7xl flex justify-between items-center mb-4 mx-auto flex-none">
-        <h1 className="text-3xl sm:text-4xl font-bold font-headline text-primary">TimeWise</h1>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <AboutSheet />
+      {/* Floating Glass Dock Navigation */}
+      <aside className="w-[80px] h-full flex flex-col justify-between items-center py-6 px-3 flex-none relative z-20">
+        <div className="glass-panel w-full h-full flex flex-col justify-between items-center py-6 rounded-3xl">
+          {/* Top Branding Logo */}
+          <div className="flex flex-col items-center gap-2 relative z-10">
+            <div className="h-10 w-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.2)] cursor-pointer hover:bg-emerald-500/30 transition-all duration-300">
+              <span className="font-black text-emerald-400 text-lg tracking-tighter text-glow-emerald">
+                W
+              </span>
+            </div>
+          </div>
+
+          {/* Nav Icons */}
+          <nav className="flex flex-col gap-4 relative z-10 w-full items-center">
+            <button
+              onClick={() => setActiveTab("mewurk")}
+              className={`relative p-3 rounded-xl flex items-center justify-center transition-all duration-300 w-12 h-12 ${
+                activeTab === "mewurk"
+                  ? "text-white bg-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] border border-white/20"
+                  : "text-white/50 hover:text-white hover:bg-white/5"
+              }`}
+              title="Mewurk Logs"
+            >
+              <Icons.Briefcase className="h-5 w-5" />
+              {activeTab === "mewurk" && (
+                <motion.div
+                  layoutId="activeDockDot"
+                  className="absolute -right-1 w-1 h-6 bg-emerald-400 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.6)]"
+                  transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                />
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab("tracker")}
+              className={`relative p-3 rounded-xl flex items-center justify-center transition-all duration-300 w-12 h-12 ${
+                activeTab === "tracker"
+                  ? "text-white bg-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] border border-white/20"
+                  : "text-white/50 hover:text-white hover:bg-white/5"
+              }`}
+              title="Manual Tracker"
+            >
+              <Icons.Timer className="h-5 w-5" />
+              {activeTab === "tracker" && (
+                <motion.div
+                  layoutId="activeDockDot"
+                  className="absolute -right-1 w-1 h-6 bg-emerald-400 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.6)]"
+                  transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                />
+              )}
+            </button>
+          </nav>
+
+          {/* Bottom Utility Toggles */}
+          <div className="flex flex-col gap-4 relative z-10 items-center">
+            <div className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all">
+              <ThemeToggle />
+            </div>
+            <div className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all">
+              <AboutSheet />
+            </div>
+          </div>
         </div>
-      </header>
+      </aside>
 
-      <main className="w-full max-w-7xl mx-auto flex flex-col gap-6 flex-1 min-h-0">
-        <Tabs defaultValue="tracker" className="h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="tracker">Manual Time Tracker</TabsTrigger>
-            <TabsTrigger value="mewurk">Mewurk Logs</TabsTrigger>
-          </TabsList>
-
-          <TabsContent
-            value="tracker"
-            className="h-full mt-0 flex-1 min-h-0 data-[state=active]:flex data-[state=active]:flex-col"
-          >
-            <TimeTrackerCards
-              isWorkDayOver={isWorkDayOver}
-              isValid={isDurationValid}
-              completionTime={completionTime}
-              currentTime={currentTime}
-              overtime={overtime}
-              timeRemaining={timeRemaining}
-              progress={progress}
-              activeDurationMode={activeDuration.mode}
-              onSetWorkDuration={setWorkDuration}
-              arrivalTime={arrivalTime}
-              onStartTimeChange={handleStartTimeChange}
-              totalBreakMs={currentTotalBreakMs}
-              workDoneMs={workDoneMs}
-              isOnBreak={sessionState.isOnBreak}
-              onToggleBreak={handleToggleBreak}
-              logs={sessionState.logs || []}
-              fullDayHours={settings.fullDayHours}
-              fullDayMinutes={settings.fullDayMinutes}
-              onDurationSettingsChange={(hours, minutes) => {
-                setSettings((prev) => ({ ...prev, fullDayHours: hours, fullDayMinutes: minutes }));
-                // Logic to update active duration immediately if in Full mode
-                // This mimics the effect inside `handleSaveSettings` but for specific values
-                const h = parseInt(hours, 10) || 0;
-                const m = parseInt(minutes, 10) || 0;
-                if (activeDuration.mode === "full") {
-                  setActiveDuration((prev) => ({ ...prev, hours: h, minutes: m }));
-                } else {
-                  const totalMinutes = (h * 60 + m) / 2;
-                  setActiveDuration((prev) => ({
+      {/* Main Console Workspace Viewport */}
+      <main className="flex-1 min-h-0 h-full flex flex-col relative z-10 p-6 pl-2 overflow-hidden">
+        <AnimatePresence mode="wait">
+          {activeTab === "mewurk" ? (
+            <motion.div
+              key="mewurk"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="h-full w-full flex flex-col overflow-hidden"
+            >
+              <MewurkLogs
+                targetHours={Number(settings.fullDayHours) || 8}
+                targetMinutes={Number(settings.fullDayMinutes) || 0}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="tracker"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="h-full w-full flex flex-col overflow-hidden"
+            >
+              <TimeTrackerCards
+                isWorkDayOver={isWorkDayOver}
+                isValid={isDurationValid}
+                completionTime={completionTime}
+                currentTime={currentTime}
+                overtime={overtime}
+                timeRemaining={timeRemaining}
+                progress={progress}
+                activeDurationMode={activeDuration.mode}
+                onSetWorkDuration={setWorkDuration}
+                arrivalTime={arrivalTime}
+                onStartTimeChange={handleStartTimeChange}
+                totalBreakMs={currentTotalBreakMs}
+                workDoneMs={workDoneMs}
+                isOnBreak={sessionState.isOnBreak}
+                onToggleBreak={handleToggleBreak}
+                logs={sessionState.logs || []}
+                fullDayHours={settings.fullDayHours}
+                fullDayMinutes={settings.fullDayMinutes}
+                onDurationSettingsChange={(hours, minutes) => {
+                  setSettings((prev) => ({
                     ...prev,
-                    hours: Math.floor(totalMinutes / 60),
-                    minutes: totalMinutes % 60,
+                    fullDayHours: hours,
+                    fullDayMinutes: minutes,
                   }));
-                }
-                toast({ title: "Updated", description: "Work duration settings updated." });
-              }}
-              onAddManualBreak={handleAddManualBreak}
-            />
-          </TabsContent>
-
-          <TabsContent
-            value="mewurk"
-            className="h-full mt-0 flex-1 min-h-0 data-[state=active]:flex data-[state=active]:flex-col"
-          >
-            <MewurkLogs
-              targetHours={Number(settings.fullDayHours) || 8}
-              targetMinutes={Number(settings.fullDayMinutes) || 0}
-            />
-          </TabsContent>
-        </Tabs>
+                  const h = parseInt(hours, 10) || 0;
+                  const m = parseInt(minutes, 10) || 0;
+                  if (activeDuration.mode === "full") {
+                    setActiveDuration((prev) => ({ ...prev, hours: h, minutes: m }));
+                  } else {
+                    const totalMinutes = (h * 60 + m) / 2;
+                    setActiveDuration((prev) => ({
+                      ...prev,
+                      hours: Math.floor(totalMinutes / 60),
+                      minutes: totalMinutes % 60,
+                    }));
+                  }
+                  toast({ title: "Updated", description: "Work duration settings updated." });
+                }}
+                onAddManualBreak={handleAddManualBreak}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
-
-      <footer className="w-full max-w-7xl mx-auto text-center pt-4 pb-2 flex-none">
-        <p className="text-sm text-muted-foreground px-4 sm:px-6">
-          Built by{" "}
-          <a
-            href="https://www.linkedin.com/in/mitulparmar11/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-semibold text-primary hover:underline"
-          >
-            Mitul Parmar
-          </a>{" "}
-          (
-          <a
-            href="https://github.com/mitulparmar7161/time-wise.git"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-semibold text-primary hover:underline"
-          >
-            open source
-          </a>
-          )
-        </p>
-      </footer>
     </div>
   );
 }

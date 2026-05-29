@@ -3,6 +3,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 
 import { differenceInMilliseconds, format, isSameDay, isValid } from "date-fns";
+import { AnimatePresence, motion } from "framer-motion";
+import gsap from "gsap";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -160,7 +162,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
         getCardDetailsAction(year, month),
       ]);
 
-      if (logsRes.isSuccess) {
+      if (logsRes.isSuccess && "data" in logsRes) {
         setData(logsRes.data);
       } else {
         if (logsRes.statusCode === 401) {
@@ -182,7 +184,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
         setError(logsRes.message || "Failed to fetch logs");
       }
 
-      if (statsRes.isSuccess) {
+      if (statsRes.isSuccess && "data" in statsRes) {
         setMonthStats(statsRes.data.cardDetails);
       } else {
         console.error("Failed to fetch month stats:", statsRes.message);
@@ -455,444 +457,411 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
   // Login View
   if (!token) {
     return (
-      <div className="flex h-full items-center justify-center p-4">
-        <Card className="w-full max-w-sm shadow-xl border-primary/10 bg-gradient-to-br from-card to-primary/5">
-          <CardHeader className="text-center pb-2">
-            <div className="mx-auto bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mb-4">
-              <Icons.Building className="h-6 w-6 text-primary" />
-            </div>
-            <CardTitle className="text-2xl font-bold text-foreground">Mewurk Connect</CardTitle>
-            <CardDescription>Login with your corporate credentials</CardDescription>
-          </CardHeader>
-          <form onSubmit={handleLogin}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isLoggingIn}
-                  className="bg-background/50"
-                  required
-                />
+      <div className="flex h-full items-center justify-center p-4 rounded-3xl relative overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="w-full max-w-md z-10"
+        >
+          <Card className="glass-panel border-none shadow-2xl relative overflow-hidden">
+            <CardHeader className="text-center pb-6 pt-10">
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(16,185,129,0.2)] text-glow-emerald">
+                <Icons.Building className="h-8 w-8 text-emerald-400" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
+              <CardTitle className="text-3xl font-black tracking-tight text-white mb-2">
+                Mewurk Connect
+              </CardTitle>
+              <CardDescription className="text-white/60 text-sm font-medium tracking-wide">
+                Sync your console to the master node
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleLogin}>
+              <CardContent className="space-y-5 px-8">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="email"
+                    className="text-xs font-bold text-white/70 uppercase tracking-widest"
+                  >
+                    Email Address
+                  </Label>
                   <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    id="email"
+                    type="email"
+                    placeholder="name@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoggingIn}
-                    className="bg-background/50 pr-10"
+                    className="glass-input h-12 text-sm"
                     required
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full w-9 px-3 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                    disabled={isLoggingIn}
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="password"
+                    className="text-xs font-bold text-white/70 uppercase tracking-widest"
                   >
-                    {showPassword ? (
-                      <Icons.EyeOff className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                    ) : (
-                      <Icons.Eye className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                    )}
-                    <span className="sr-only">
-                      {showPassword ? "Hide password" : "Show password"}
-                    </span>
-                  </Button>
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={isLoggingIn}
+                      className="glass-input h-12 text-sm pr-12"
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1 h-10 w-10 hover:bg-white/10 text-white/60 hover:text-white rounded-xl"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={isLoggingIn}
+                    >
+                      {showPassword ? (
+                        <Icons.EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Icons.Eye className="h-5 w-5" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              {error && (
-                <div className="p-3 rounded-md bg-destructive/10 text-destructive text-xs font-medium flex items-center gap-2">
-                  <Icons.Info className="h-4 w-4" />
-                  {error}
-                </div>
-              )}
-            </CardContent>
-            <CardFooter>
-              <Button
-                type="submit"
-                className="w-full shadow-lg shadow-primary/20"
-                disabled={isLoggingIn}
-              >
-                {isLoggingIn ? (
-                  <>
-                    <Icons.Loader className="mr-2 h-4 w-4 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  <>
-                    Login to Mewurk
-                    <Icons.LogIn className="ml-2 h-4 w-4" />
-                  </>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="p-3 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-200 text-sm font-medium flex items-center gap-2"
+                  >
+                    <Icons.Info className="h-5 w-5 shrink-0 text-rose-400" />
+                    <span>{error}</span>
+                  </motion.div>
                 )}
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
+              </CardContent>
+              <CardFooter className="pb-10 pt-4 px-8">
+                <Button
+                  type="submit"
+                  className="w-full glass-button-primary h-12 text-base tracking-wide"
+                  disabled={isLoggingIn}
+                >
+                  {isLoggingIn ? (
+                    <>
+                      <Icons.Loader className="mr-2 h-5 w-5 animate-spin" />
+                      Syncing Node...
+                    </>
+                  ) : (
+                    <>
+                      Connect Node
+                      <Icons.LogIn className="ml-2 h-5 w-5" />
+                    </>
+                  )}
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
+        </motion.div>
       </div>
     );
   }
 
   // Logs View
   return (
-    <div className="flex flex-col gap-4 h-full font-sans overflow-hidden">
-      {/* Header Badge */}
-      <Card className="flex-none shadow-md border-primary/20 bg-gradient-to-r from-card via-card to-primary/5 overflow-hidden relative">
-        <div className="absolute top-0 right-0 p-3 opacity-5">
-          <Icons.Briefcase className="w-32 h-32 -mr-8 -mt-8" />
-        </div>
-        <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
-              <span className="font-bold text-primary text-sm">
-                {userName ? userName.charAt(0).toUpperCase() : "U"}
+    <div className="flex flex-col gap-6 h-full font-sans overflow-hidden">
+      {/* Glass Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="flex-none p-4 px-6 flex flex-col sm:flex-row items-center justify-between gap-4 glass-panel relative z-10"
+      >
+        <div className="flex items-center gap-4 relative z-10">
+          <div className="h-12 w-12 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shadow-sm backdrop-blur-md">
+            <span className="font-black text-white text-xl">
+              {userName ? userName.charAt(0).toUpperCase() : "U"}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <h3 className="font-bold text-lg leading-tight text-white tracking-wide">
+              {userName || "User"}
+            </h3>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-pulse" />
+              <span className="text-xs text-emerald-400 font-bold uppercase tracking-widest text-glow-emerald">
+                System Active
               </span>
             </div>
-            <div className="flex flex-col">
-              <h3 className="font-bold text-base leading-none tracking-tight">
-                {userName || "User"}
-              </h3>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="flex h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs text-muted-foreground font-medium">
-                  Connected to Mewurk
-                </span>
-              </div>
-            </div>
           </div>
+        </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-1 sm:flex-none">
-              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full sm:w-[240px] justify-start text-left font-normal bg-background/80",
-                      !date && "text-muted-foreground"
-                    )}
-                  >
-                    <Icons.Calendar className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={(newDate) => {
-                      if (newDate) {
-                        setDate(newDate);
-                        setIsCalendarOpen(false);
-                      }
-                    }}
-                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 shrink-0 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
-              onClick={handleLogout}
-              title="Logout"
-            >
-              <Icons.LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <div className="flex items-center gap-3 w-full sm:w-auto relative z-10">
+          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full sm:w-[220px] h-12 justify-start text-left font-bold glass-button-secondary text-sm",
+                  !date && "text-white/50"
+                )}
+              >
+                <Icons.Calendar className="mr-3 h-5 w-5 text-white/70" />
+                {date ? format(date, "MMMM do, yyyy") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 rounded-2xl glass-panel border-none" align="end">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={(newDate) => {
+                  if (newDate) {
+                    setDate(newDate);
+                    setIsCalendarOpen(false);
+                  }
+                }}
+                disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                initialFocus
+                className="bg-transparent text-white"
+              />
+            </PopoverContent>
+          </Popover>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-12 w-12 shrink-0 rounded-xl glass-button-secondary hover:bg-rose-500/20 hover:text-rose-200 hover:border-rose-500/30"
+            onClick={handleLogout}
+            title="Logout"
+          >
+            <Icons.LogOut className="h-5 w-5" />
+          </Button>
+        </div>
+      </motion.div>
 
-      {/* Content */}
+      {/* Main Content Layout */}
       {loading ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 text-muted-foreground animate-in fade-in duration-500">
-          <div className="relative">
-            <Icons.Loader className="h-10 w-10 animate-spin text-primary" />
-            <div className="absolute inset-0 h-10 w-10 animate-ping rounded-full border border-primary opacity-20"></div>
-          </div>
-          <p className="text-sm font-medium">Fetching Records...</p>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 text-white/60 animate-in fade-in duration-200">
+          <Icons.Loader className="h-8 w-8 animate-spin text-emerald-400 text-glow-emerald" />
+          <p className="text-xs font-bold uppercase tracking-widest text-emerald-400/80">
+            Syncing node data...
+          </p>
         </div>
       ) : data && stats ? (
-        <div className="flex-1 min-h-0 flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-500 overflow-hidden">
-          {/* Monthly Overview */}
+        <div className="flex-1 min-h-0 flex flex-col gap-6 overflow-hidden">
+          {/* Monthly Stats Summary Row */}
           {monthStats && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 flex-none">
-              <Card className="bg-gradient-to-br from-emerald-500/5 to-transparent border-emerald-500/20">
-                <CardHeader className="p-3 pb-1">
-                  <CardTitle className="text-xs font-semibold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
-                    <Icons.CalendarCheck className="h-3.5 w-3.5" /> Present
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-3 pt-0">
-                  <div className="text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-400">
-                    {monthStats.present.totalPresent}{" "}
-                    <span className="text-xs font-sans font-medium text-muted-foreground ml-0.5">
-                      Days
-                    </span>
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+              }}
+              className="grid grid-cols-2 lg:grid-cols-4 gap-6 flex-none"
+            >
+              {[
+                {
+                  title: "Present Days",
+                  val: `${monthStats!.present.totalPresent}`,
+                  icon: <Icons.CalendarCheck className="h-5 w-5 text-cyan-400" />,
+                  color: "cyan",
+                },
+                {
+                  title: "Average Hours",
+                  val: `${monthStats!.workingHours.dayAvg.toFixed(1)}h`,
+                  icon: <Icons.Clock className="h-5 w-5 text-emerald-400" />,
+                  color: "emerald",
+                },
+                {
+                  title: "Grace Penalties",
+                  val: `${monthStats!.gracePeriod.lateIn + monthStats!.gracePeriod.earlyOut}`,
+                  icon: <Icons.AlertTriangle className="h-5 w-5 text-amber-400" />,
+                  color: "amber",
+                },
+                {
+                  title: "Time Off",
+                  val: `${monthStats!.offDays.totalWeekoff + monthStats!.offDays.totalLeave + monthStats!.offDays.totalHoliday}`,
+                  icon: <Icons.Coffee className="h-5 w-5 text-purple-400" />,
+                  color: "purple",
+                },
+              ].map((item, idx) => (
+                <motion.div
+                  key={idx}
+                  variants={{
+                    hidden: { opacity: 0, y: 20 },
+                    visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } },
+                  }}
+                  className="p-5 rounded-2xl glass-panel glass-panel-hover flex flex-col justify-between"
+                >
+                  <div className="text-xs uppercase font-bold tracking-widest text-white/60 flex items-center gap-2">
+                    {item.icon}
+                    {item.title}
                   </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-gradient-to-br from-blue-500/5 to-transparent border-blue-500/20">
-                <CardHeader className="p-3 pb-1">
-                  <CardTitle className="text-xs font-semibold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
-                    <Icons.Clock className="h-3.5 w-3.5" /> Avg Hours
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-3 pt-0">
-                  <div className="text-2xl font-bold font-mono text-blue-700 dark:text-blue-400">
-                    {monthStats.workingHours.dayAvg.toFixed(1)}{" "}
-                    <span className="text-xs font-sans font-medium text-muted-foreground ml-0.5">
-                      Hrs/Day
-                    </span>
+                  <div className="text-3xl font-black tracking-tight text-white mt-3">
+                    {item.val}
                   </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-gradient-to-br from-orange-500/5 to-transparent border-orange-500/20">
-                <CardHeader className="p-3 pb-1">
-                  <CardTitle className="text-xs font-semibold text-orange-600 uppercase tracking-wider flex items-center gap-1.5">
-                    <Icons.AlertTriangle className="h-3.5 w-3.5" /> In/Out
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-3 pt-0 flex gap-3">
-                  <div>
-                    <div className="text-xl font-bold font-mono text-orange-700 dark:text-orange-400">
-                      {monthStats.gracePeriod.lateIn}
-                    </div>
-                    <div className="text-[10px] uppercase text-muted-foreground font-bold">
-                      Late
-                    </div>
-                  </div>
-                  <div className="w-px bg-orange-500/20" />
-                  <div>
-                    <div className="text-xl font-bold font-mono text-orange-700 dark:text-orange-400">
-                      {monthStats.gracePeriod.earlyOut}
-                    </div>
-                    <div className="text-[10px] uppercase text-muted-foreground font-bold">
-                      Early
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-gradient-to-br from-cyan-500/5 to-transparent border-cyan-500/20">
-                <CardHeader className="p-3 pb-1">
-                  <CardTitle className="text-xs font-semibold text-cyan-600 uppercase tracking-wider flex items-center gap-1.5">
-                    <Icons.Coffee className="h-3.5 w-3.5" /> Off Days
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-3 pt-0">
-                  <div className="text-2xl font-bold font-mono text-cyan-700 dark:text-cyan-400">
-                    {monthStats.offDays.totalWeekoff +
-                      monthStats.offDays.totalLeave +
-                      monthStats.offDays.totalHoliday}{" "}
-                    <span className="text-xs font-sans font-medium text-muted-foreground ml-0.5">
-                      Total
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                </motion.div>
+              ))}
+            </motion.div>
           )}
 
-          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Left Column: Stats */}
-            <div className="lg:col-span-2 flex flex-col gap-4 h-full overflow-y-auto pr-1">
-              {/* Time Progress */}
-              <Card className="flex-none shadow-md border-primary/20 transition-all duration-300 hover:shadow-lg group relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
-                <CardHeader className="pb-2 pt-3 relative z-10 flex flex-row items-center justify-between space-y-0">
-                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                    <Icons.Timer className="h-3.5 w-3.5 text-primary" />
-                    {stats.remainingMs > 0 ? "Time Remaining" : "Overtime Session"}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="relative z-10 p-3 pt-0 pb-3">
-                  <div className="animate-in fade-in zoom-in-95 space-y-3">
-                    <div className="flex flex-col items-center justify-center space-y-0.5">
-                      <div
-                        className={`text-5xl sm:text-6xl font-extrabold font-mono tracking-tighter tabular-nums leading-none ${
-                          stats.remainingMs <= 0
-                            ? "text-orange-600 dark:text-orange-500 drop-shadow-sm"
-                            : "text-foreground drop-shadow-sm"
-                        }`}
-                      >
-                        {formatHms(
-                          stats.remainingMs > 0 ? stats.remainingMs : Math.abs(stats.remainingMs)
-                        )}
-                        {stats.remainingMs <= 0 && (
-                          <span className="text-sm align-top ml-0.5 text-orange-600 font-bold">
-                            +
-                          </span>
-                        )}
-                      </div>
-                      {stats.remainingMs <= 0 && (
-                        <span className="text-[10px] font-bold text-orange-600/90 bg-orange-100 dark:bg-orange-900/30 px-2 py-0.5 rounded-full uppercase tracking-wide shadow-sm border border-orange-200 dark:border-orange-800/50">
-                          Over Target
-                        </span>
+          {/* Core Master Deck Panels */}
+          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden">
+            {/* Center View: Segmented Tracker & Key Details */}
+            <div className="lg:col-span-8 flex flex-col gap-6 h-full custom-scrollbar overflow-y-auto pr-2">
+              {/* Main Progress Tracker Panel */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, delay: 0.2 }}
+                className="flex-none p-6 glass-panel rounded-3xl"
+              >
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                      <Icons.Timer className="h-5 w-5 text-emerald-400" />
+                    </div>
+                    <span className="text-sm uppercase font-bold tracking-widest text-white">
+                      {stats!.remainingMs > 0
+                        ? "Tracking Session Active"
+                        : "Overtime Session Active"}
+                    </span>
+                  </div>
+                  <span className="text-sm font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.1)] text-glow-emerald">
+                    {Math.round(stats!.progress)}% Completed
+                  </span>
+                </div>
+
+                {/* Counter statistics and elapsed time */}
+                <div className="flex flex-col sm:flex-row items-baseline sm:items-end justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs uppercase font-bold text-white/50 tracking-widest">
+                      {stats!.remainingMs > 0 ? "Remaining Time" : "Overtime Accrued"}
+                    </span>
+                    <span className="text-5xl md:text-6xl font-black tracking-tighter text-white drop-shadow-md">
+                      {formatHms(
+                        stats!.remainingMs > 0 ? stats!.remainingMs : Math.abs(stats!.remainingMs)
                       )}
-                      <div className="flex items-center gap-2 text-muted-foreground bg-muted/40 px-4 py-1.5 rounded-full animate-in fade-in slide-in-from-bottom-2 mt-2">
-                        <span className="text-xs uppercase font-bold tracking-widest">
-                          Time Spent
-                        </span>
-                        <span className="text-xl font-mono font-bold text-foreground">
-                          {formatHms(stats.totalWorkMs)}
-                        </span>
-                      </div>
-                    </div>
+                    </span>
+                  </div>
 
-                    <div className="space-y-1.5 px-1">
-                      <div className="flex justify-between items-end">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                          Progress
-                        </span>
-                        <span className="text-xs font-mono font-bold text-primary">
-                          {Math.round(stats.progress)}%
-                        </span>
-                      </div>
-                      <div className="relative h-2 w-full bg-secondary/50 rounded-full overflow-hidden shadow-inner">
-                        <div
-                          className={`h-full transition-all duration-500 rounded-full ${stats.remainingMs <= 0 ? "bg-gradient-to-r from-orange-400 to-orange-600" : "bg-gradient-to-r from-blue-500 to-indigo-600"}`}
-                          style={{ width: `${Math.min(100, stats.progress)}%` }}
-                        />
-                      </div>
+                  <div className="flex flex-col gap-2 text-sm text-white/70 font-bold bg-white/5 p-3 rounded-xl border border-white/10">
+                    <div className="flex items-center justify-between gap-4">
+                      <span>Work Time:</span>
+                      <span className="text-white">
+                        {formatHms(stats!.totalWorkMs).split(" ")[0]}h{" "}
+                        {formatHms(stats!.totalWorkMs).split(" ")[1]}
+                      </span>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-secondary/40 border border-border/50">
-                        <span className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground mb-0.5">
-                          {stats.remainingMs <= 0 ? "Finished At" : "Completes At"}
-                        </span>
-                        <div className="flex items-center gap-1 text-foreground">
-                          <Icons.Flag className="w-3 h-3 text-primary/70" />
-                          <span className="text-xl font-mono font-bold tracking-tight">
-                            {format(stats.estimatedEndTime, "hh:mm a")}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-secondary/40 border border-border/50 relative overflow-hidden">
-                        {stats.isDefaultAndMissing && (
-                          <div
-                            className="absolute top-0 right-0 p-1 opacity-50"
-                            title="Using default 8h 15m duration (Shift times not detected)"
-                          >
-                            <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                          </div>
-                        )}
-                        <span className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground mb-0.5">
-                          Goal
-                        </span>
-                        <div className="flex items-center gap-1 text-foreground">
-                          <Icons.Target className="w-3 h-3 text-primary/70" />
-                          <span className="text-xl font-mono font-bold tracking-tight">
-                            {stats.targetHours}h{" "}
-                            {stats.targetMinutes > 0 ? `${stats.targetMinutes}m` : ""}
-                          </span>
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <span>Target Shift:</span>
+                      <span className="text-white">
+                        {stats!.targetHours}h{" "}
+                        {stats!.targetMinutes > 0 && `${stats!.targetMinutes}m`}
+                      </span>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
 
-              <div className="grid grid-cols-2 gap-4 flex-1">
-                {/* First Punch */}
-                <Card className="h-full flex flex-col justify-center">
-                  <CardHeader className="p-4 pb-2 space-y-0">
-                    <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                      <Icons.Timer className="h-3 w-3" /> Started At
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <div className="text-2xl sm:text-3xl font-bold font-mono">
-                      {stats.firstPunchTime ? format(stats.firstPunchTime, "hh:mm a") : "--:--"}
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Smooth Progress Bar */}
+                <div className="w-full h-3 bg-black/40 rounded-full mt-8 overflow-hidden shadow-inner border border-white/5">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, Math.max(0, stats!.progress))}%` }}
+                    transition={{ duration: 1, ease: "easeOut", delay: 0.5 }}
+                    className="h-full bg-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.8)] relative"
+                  >
+                    <div className="absolute inset-0 bg-white/20 w-full h-full animate-[shimmer_2s_infinite]" />
+                  </motion.div>
+                </div>
+              </motion.div>
 
-                {/* Breaks */}
-                <Card className="h-full flex flex-col justify-center">
-                  <CardHeader className="p-4 pb-2 space-y-0">
-                    <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                      <Icons.Coffee className="h-3 w-3" /> Breaks
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0 flex items-center justify-between">
-                    <div className="text-2xl sm:text-3xl font-bold font-mono">
-                      {formatHms(stats.totalBreakMs)}
+              {/* Grid 2x2 of details */}
+              <div className="grid grid-cols-2 gap-6 flex-none pb-4">
+                {[
+                  {
+                    title: "Arrival Time",
+                    val: stats!.firstPunchTime ? format(stats!.firstPunchTime, "hh:mm a") : "--:--",
+                    sub: "First Shift Checkin",
+                    icon: <Icons.Timer className="h-6 w-6 text-cyan-400" />,
+                  },
+                  {
+                    title: "Break Duration",
+                    val: formatHms(stats!.totalBreakMs),
+                    sub: `${stats!.breakCount} Breaks Active`,
+                    icon: <Icons.Coffee className="h-6 w-6 text-amber-400" />,
+                  },
+                  {
+                    title: "Shift Window",
+                    val:
+                      data!.shiftStartTime && data!.shiftEndTime
+                        ? `${data!.shiftStartTime.split(" ")[1].slice(0, 5)} - ${data!.shiftEndTime.split(" ")[1].slice(0, 5)}`
+                        : "--:-- - --:--",
+                    sub: data!.shiftName || "Standard",
+                    icon: <Icons.Briefcase className="h-6 w-6 text-blue-400" />,
+                  },
+                  {
+                    title: "Policy Group",
+                    val: data!.policyName,
+                    sub: "Corporate Plan",
+                    icon: <Icons.FileText className="h-6 w-6 text-purple-400" />,
+                  },
+                ].map((pill, idx) => (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.3 + idx * 0.1 }}
+                    key={idx}
+                    className="glass-panel glass-panel-hover p-5 rounded-2xl flex flex-col justify-between"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs uppercase font-bold tracking-widest text-white/60">
+                        {pill.title}
+                      </span>
+                      <div className="p-2 rounded-xl bg-white/5 border border-white/10">
+                        {pill.icon}
+                      </div>
                     </div>
-                    <div className="text-sm px-2.5 py-1 bg-secondary rounded-full font-medium">
-                      {stats.breakCount}x
+                    <div className="mt-4">
+                      <div className="text-xl font-bold tracking-tight text-white truncate">
+                        {pill.val}
+                      </div>
+                      <div className="text-xs font-bold text-white/50 mt-1 uppercase tracking-wider">
+                        {pill.sub}
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* Shift Info (Compacted) */}
-                <Card className="h-full flex flex-col justify-center overflow-hidden bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border-indigo-500/20">
-                  <CardHeader className="p-4 pb-2 space-y-0">
-                    <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                      <Icons.Briefcase className="h-3 w-3" /> Shift: {data.shiftName || "N/A"}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <div className="text-xl sm:text-2xl font-bold font-mono tracking-tight text-foreground/90">
-                      {data.shiftStartTime && data.shiftEndTime
-                        ? `${data.shiftStartTime.split(" ")[1].slice(0, 5)} - ${data.shiftEndTime.split(" ")[1].slice(0, 5)}`
-                        : "--:-- - --:--"}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Policy Info (Compacted) */}
-                <Card className="h-full flex flex-col justify-center overflow-hidden bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-emerald-500/20">
-                  <CardHeader className="p-4 pb-2 space-y-0">
-                    <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                      <Icons.FileText className="h-3 w-3" /> Policy
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <div
-                      className="text-sm sm:text-base font-semibold truncate text-foreground/90"
-                      title={data.policyName}
-                    >
-                      {data.policyName}
-                    </div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">
-                      Active Plan
-                    </div>
-                  </CardContent>
-                </Card>
+                  </motion.div>
+                ))}
               </div>
             </div>
 
-            {/* Right Column: Timeline */}
-            <Card className="lg:col-span-1 flex flex-col border-none shadow-lg bg-gradient-to-br from-card to-secondary/10 h-full overflow-hidden">
-              <CardHeader className="flex-none py-3 px-4 border-b bg-muted/20">
+            {/* Right View: Activity Ledger */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.4 }}
+              className="lg:col-span-4 flex flex-col glass-panel rounded-3xl h-full overflow-hidden shadow-2xl relative"
+            >
+              <div className="flex-none py-5 px-6 border-b border-white/10 bg-black/20 backdrop-blur-md relative z-10">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="font-headline text-sm font-bold flex items-center gap-2">
-                    <Icons.ListTodo className="h-4 w-4 text-primary" />
-                    Timeline
-                  </CardTitle>
-                  <span className="text-[10px] font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded border">
-                    {data.clockInDetails.length} Entries
+                  <h3 className="text-sm uppercase tracking-widest font-bold flex items-center gap-2 text-white">
+                    <Icons.ListTodo className="h-5 w-5 text-emerald-400" />
+                    Activity Timeline
+                  </h3>
+                  <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                    {data!.clockInDetails.length} Entries
                   </span>
                 </div>
-              </CardHeader>
-              <CardContent className="flex-1 min-h-0 p-0 overflow-hidden relative">
-                <ScrollArea className="h-full w-full p-0">
-                  {stats.resolvedLogs && stats.resolvedLogs.length > 0 ? (
-                    <div className="divide-y divide-border/40">
-                      {stats.resolvedLogs.map((log, index) => {
+              </div>
+
+              <div className="flex-1 min-h-0 p-0 overflow-hidden relative z-10 bg-black/10">
+                <ScrollArea className="h-full w-full p-0 custom-scrollbar">
+                  {stats!.resolvedLogs && stats!.resolvedLogs.length > 0 ? (
+                    <div className="p-4 relative">
+                      {/* Vertical line connector ledger */}
+                      <div className="absolute top-8 bottom-8 left-[39px] w-0.5 bg-white/10 pointer-events-none rounded-full" />
+
+                      {stats!.resolvedLogs.map((log, index) => {
                         const logTime = parseUtc(log.clockTime);
                         const isAuto =
                           log.originalInOutType === "AUTO" ||
@@ -906,20 +875,25 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                             ? "Walk In"
                             : "Walk Out";
 
+                        const isIn = log.inOutType === "IN";
+
                         return (
-                          <div
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.3, delay: index * 0.05 }}
                             key={index}
-                            className="flex items-center justify-between p-3 sm:p-4 hover:bg-muted/30 transition-colors group"
+                            className="flex items-center justify-between py-4 px-2 hover:bg-white/5 transition-all rounded-xl mb-1 group"
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-4 min-w-0 z-10">
                               <div
-                                className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center shadow-sm border ${
-                                  log.inOutType === "IN"
-                                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                                    : "bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400"
+                                className={`shrink-0 h-10 w-10 rounded-full flex items-center justify-center border shadow-lg transition-transform group-hover:scale-110 ${
+                                  isIn
+                                    ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400"
+                                    : "bg-amber-500/20 border-amber-500/30 text-amber-400"
                                 }`}
                               >
-                                {log.inOutType === "IN" ? (
+                                {isIn ? (
                                   <Icons.LogIn className="h-4 w-4" />
                                 ) : (
                                   <Icons.LogOut className="h-4 w-4" />
@@ -927,48 +901,51 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                               </div>
                               <div className="flex flex-col min-w-0">
                                 <span
-                                  className={`font-bold text-sm sm:text-base truncate ${log.inOutType === "IN" ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"}`}
+                                  className={`font-bold text-sm tracking-wide ${isIn ? "text-emerald-300" : "text-amber-300"}`}
                                 >
                                   {displayStatus}
                                 </span>
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5 truncate">
-                                  <Icons.MapPin className="h-3.5 w-3.5 shrink-0" />
-                                  <span className="truncate">
-                                    {log.officeName || "Remote"}
-                                    {log.deviceName && (
-                                      <span className="opacity-70 mx-1">• {log.deviceName}</span>
-                                    )}
-                                  </span>
-                                </div>
+                                <span className="truncate text-xs font-medium text-white/50 mt-0.5">
+                                  {log.officeName || "Remote"}{" "}
+                                  {log.deviceName && `• ${log.deviceName}`}
+                                </span>
                               </div>
                             </div>
                             <div className="text-right shrink-0">
-                              <span className="font-mono text-base sm:text-lg font-bold text-foreground block">
+                              <span className="text-lg font-black tracking-tight text-white block drop-shadow-sm">
                                 {format(logTime, "hh:mm")}
-                                <span className="text-xs text-muted-foreground ml-0.5 font-sans font-medium">
+                                <span className="text-xs text-white/50 ml-1 font-bold uppercase tracking-wider">
                                   {format(logTime, "a")}
                                 </span>
                               </span>
                             </div>
-                          </div>
+                          </motion.div>
                         );
                       })}
                     </div>
                   ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-3 opacity-60 p-4 text-center">
-                      <Icons.Ghost className="h-10 w-10" />
-                      <p className="text-xs font-medium">No activity yet.</p>
+                    <div className="h-full flex flex-col items-center justify-center text-white/40 gap-4 p-6 text-center">
+                      <div className="p-4 rounded-full bg-white/5 border border-white/10">
+                        <Icons.Ghost className="h-10 w-10 text-white/30" />
+                      </div>
+                      <p className="text-sm font-bold uppercase tracking-widest text-white/50">
+                        No activity logged yet
+                      </p>
                     </div>
                   )}
                 </ScrollArea>
-              </CardContent>
-            </Card>
+              </div>
+            </motion.div>
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3 opacity-80">
-          <Icons.Calendar className="h-12 w-12 stroke-1" />
-          <p className="text-sm">Select a specific date to view attendance logs.</p>
+        <div className="flex-1 flex flex-col items-center justify-center text-white/40 gap-4 opacity-80">
+          <div className="p-5 rounded-full bg-white/5 border border-white/10">
+            <Icons.Calendar className="h-10 w-10 text-white/30" />
+          </div>
+          <p className="text-sm font-bold uppercase tracking-widest text-white/50">
+            Select a specific date to load attendance logs
+          </p>
         </div>
       )}
     </div>
