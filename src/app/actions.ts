@@ -110,3 +110,100 @@ export async function getInitialAuthStateAction() {
         userName: cookieStore.get("mewurk_user_name")?.value || null,
     };
 }
+
+export async function searchEmployeesAction(searchText: string) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("mewurk_auth_token")?.value;
+    if (!token) {
+        return { isSuccess: false, statusCode: 401, message: "Unauthorized", data: null };
+    }
+    return await MewurkService.searchEmployees(token, searchText);
+}
+
+export async function getEmployeeAttendanceLogsAction(date: string, employeeCode: string) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("mewurk_auth_token")?.value;
+    if (!token) {
+        return { isSuccess: false, statusCode: 401, message: "Unauthorized" };
+    }
+    return await MewurkService.fetchAttendanceLogsForEmployee(date, token, employeeCode);
+}
+
+export async function getEmployeeCardDetailsAction(employeeCode: string, year: number, month: number) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("mewurk_auth_token")?.value;
+    if (!token) {
+        return { isSuccess: false, statusCode: 401, message: "Unauthorized" };
+    }
+    return await MewurkService.fetchCardDetailsForEmployee(token, employeeCode, year, month);
+}
+
+// Single action that fetches logs + card details in parallel — one server round-trip instead of two
+export async function getEmployeeFullDataAction(date: string, employeeCode: string, year: number, month: number) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("mewurk_auth_token")?.value;
+    if (!token) {
+        return { isSuccess: false, statusCode: 401, message: "Unauthorized", logs: null, stats: null };
+    }
+    try {
+        const [logsRes, statsRes] = await Promise.all([
+            MewurkService.fetchAttendanceLogsForEmployee(date, token, employeeCode),
+            MewurkService.fetchCardDetailsForEmployee(token, employeeCode, year, month),
+        ]);
+        return {
+            isSuccess: Boolean(logsRes?.isSuccess || statsRes?.isSuccess),
+            logs: logsRes?.isSuccess ? logsRes.data : null,
+            stats: statsRes?.isSuccess ? statsRes.data?.cardDetails ?? null : null,
+        };
+    } catch {
+        return { isSuccess: false, statusCode: 500, message: "Failed to fetch employee data", logs: null, stats: null };
+    }
+}
+
+export async function getAllEmployeesAction() {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("mewurk_auth_token")?.value;
+    if (!token) {
+        return { isSuccess: false, data: [] as import("@/services/mewurk").EmployeeSearchResult[] };
+    }
+    try {
+        const response = await fetch("https://app.mewurk.com/api/v1/employeeservice/employee/getdirectory", {
+            method: "POST",
+            headers: {
+                "accept": "application/json",
+                "authorization": `Bearer ${token}`,
+                "content-type": "application/json",
+            },
+            body: JSON.stringify({ searchText: "", pageNumber: 1, pageSize: 500 }),
+        });
+        if (!response.ok) return { isSuccess: false, data: [] };
+        const json = await response.json();
+        if (!json.isSuccess) return { isSuccess: false, data: [] };
+
+        // Extract from employeesDataResponse key (confirmed working from browser logs)
+        let list: any[] = [];
+        if (json.data?.employeesDataResponse && Array.isArray(json.data.employeesDataResponse)) {
+            list = json.data.employeesDataResponse;
+        } else if (Array.isArray(json.data)) {
+            list = json.data;
+        } else if (json.data && typeof json.data === "object") {
+            const key = Object.keys(json.data).find((k) => Array.isArray((json.data as any)[k]));
+            if (key) list = (json.data as any)[key];
+        }
+
+        const employees = list.map((e: any) => ({
+            employeeCode: e.employeeCode ?? e.EmployeeCode ?? e.empCode ?? 0,
+            firstName: e.firstName ?? e.FirstName ?? e.first_name ?? e.foreName ?? "",
+            lastName: e.lastName ?? e.LastName ?? e.last_name ?? e.surName ?? "",
+            email: e.email ?? e.Email ?? e.emailId ?? "",
+            designation: e.designation ?? e.Designation ?? e.designationName ?? "",
+            department: e.department ?? e.Department ?? e.departmentName ?? "",
+        }));
+
+        return { isSuccess: true, data: employees };
+    } catch {
+        return { isSuccess: false, data: [] };
+    }
+}
+
+
