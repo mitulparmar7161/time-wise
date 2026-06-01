@@ -425,7 +425,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
   // Login View
   if (!token) {
     return (
-      <div className="flex h-full items-center justify-center p-4">
+      <div className="flex min-h-[60dvh] items-center justify-center p-2 sm:p-4 lg:h-full">
         <Card className="w-full max-w-sm shadow-xl border-primary/10 bg-gradient-to-br from-card to-primary/5">
           <CardHeader className="text-center pb-2">
             <div className="mx-auto bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mb-4">
@@ -515,19 +515,19 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
 
   // Logs View
   return (
-    <div className="flex flex-col gap-4 h-full font-sans overflow-hidden">
+    <div className="flex w-full min-w-0 flex-col gap-4 overflow-visible font-sans">
       {/* Header Badge */}
       <Card className="flex-none shadow-md border-primary/20 bg-gradient-to-r from-card via-card to-primary/5 overflow-hidden relative">
         <div className="absolute top-0 right-0 p-3 opacity-5 display-none"></div>
-        <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
-          <div className="flex items-center gap-3">
+        <CardContent className="relative z-10 flex flex-col items-stretch justify-between gap-4 p-3 sm:flex-row sm:items-center sm:p-4">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
               <span className="font-bold text-primary text-sm">
                 {userName ? userName.charAt(0).toUpperCase() : "U"}
               </span>
             </div>
-            <div className="flex flex-col">
-              <h3 className="font-bold text-base leading-none tracking-tight">
+            <div className="flex min-w-0 flex-col">
+              <h3 className="truncate text-base font-bold leading-none tracking-tight">
                 {userName || "User"}
               </h3>
               <div className="flex items-center gap-1.5 mt-1">
@@ -539,12 +539,12 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="grid w-full grid-cols-[1fr_auto] gap-2 sm:flex sm:w-auto sm:items-center">
             {/* Toggle Button to swap views */}
             <Button
               variant={activeView === "search" ? "secondary" : "default"}
               className={cn(
-                "h-10 shrink-0 gap-2 px-4 font-semibold transition-colors",
+                "col-span-2 h-10 shrink-0 gap-2 px-3 font-semibold transition-colors sm:col-span-1 sm:px-4",
                 activeView === "search" && "border border-primary/30 bg-primary/20 text-primary"
               )}
               onClick={() => setActiveView(activeView === "search" ? "my-logs" : "search")}
@@ -563,18 +563,18 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
               )}
             </Button>
 
-            <div className="relative flex-1 sm:flex-none">
+            <div className="relative min-w-0 flex-1 sm:flex-none">
               <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-full sm:w-[240px] justify-start text-left font-normal bg-background/80",
+                      "w-full justify-start overflow-hidden text-left font-normal bg-background/80 sm:w-[240px]",
                       !date && "text-muted-foreground"
                     )}
                   >
                     <Icons.Calendar className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                    <span className="truncate">{date ? format(date, "PPP") : "Pick a date"}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
@@ -610,7 +610,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
 
       {/* Main Content Render */}
       {activeView === "search" ? (
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+        <div className="flex-1 min-h-0 flex flex-col overflow-visible animate-in fade-in zoom-in-95 duration-300">
           <EmployeeSearch
             targetHours={targetHours}
             targetMinutes={targetMinutes}
@@ -627,10 +627,10 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
           <p className="text-sm font-medium">Fetching Records...</p>
         </div>
       ) : data && stats ? (
-        <div className="flex-1 min-h-0 flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-500 overflow-hidden">
+        <div className="flex-1 flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-500 overflow-visible">
           {/* Monthly Overview */}
           {monthStats && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 flex-none">
+            <div className="grid flex-none grid-cols-1 gap-3 min-[380px]:grid-cols-2 lg:grid-cols-4 lg:gap-4">
               <Card className="bg-gradient-to-br from-emerald-500/5 to-transparent border-emerald-500/20">
                 <CardHeader className="p-3 pb-1">
                   <CardTitle className="text-xs font-semibold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
@@ -638,7 +638,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-3 pt-0">
-                  <div className="text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-400">
+                  <div className="font-mono text-xl font-bold text-emerald-700 dark:text-emerald-400 sm:text-2xl">
                     {monthStats.present.totalPresent}{" "}
                     <span className="text-xs font-sans font-medium text-muted-foreground ml-0.5">
                       Days
@@ -653,7 +653,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-3 pt-0">
-                  <div className="text-2xl font-bold font-mono text-blue-700 dark:text-blue-400">
+                  <div className="font-mono text-xl font-bold text-blue-700 dark:text-blue-400 sm:text-2xl">
                     {monthStats.workingHours.dayAvg.toFixed(1)}{" "}
                     <span className="text-xs font-sans font-medium text-muted-foreground ml-0.5">
                       Hrs/Day
@@ -694,7 +694,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-3 pt-0">
-                  <div className="text-2xl font-bold font-mono text-cyan-700 dark:text-cyan-400">
+                  <div className="font-mono text-xl font-bold text-cyan-700 dark:text-cyan-400 sm:text-2xl">
                     {monthStats.offDays.totalWeekoff +
                       monthStats.offDays.totalLeave +
                       monthStats.offDays.totalHoliday}{" "}
@@ -707,9 +707,9 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
             </div>
           )}
 
-          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-3 min-w-0 w-full overflow-visible">
             {/* Left Column: Stats */}
-            <div className="lg:col-span-2 flex flex-col gap-4 h-full overflow-y-auto pr-1">
+            <div className="flex flex-col gap-4 overflow-visible lg:col-span-2 lg:pr-1">
               {/* Time Progress */}
               <Card className="flex-none shadow-md border-primary/20 transition-all duration-300 hover:shadow-lg group relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
@@ -723,7 +723,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                   <div className="animate-in fade-in zoom-in-95 space-y-3">
                     <div className="flex flex-col items-center justify-center space-y-0.5">
                       <div
-                        className={`text-5xl sm:text-6xl font-extrabold font-mono tracking-tighter tabular-nums leading-none ${
+                        className={`w-full min-w-0 break-words text-center font-mono text-[clamp(2.1rem,11vw,3.75rem)] font-extrabold leading-none tracking-tighter tabular-nums ${
                           stats.remainingMs <= 0
                             ? "text-orange-600 dark:text-orange-500 drop-shadow-sm"
                             : "text-foreground drop-shadow-sm"
@@ -743,11 +743,11 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                           Over Target
                         </span>
                       )}
-                      <div className="flex items-center gap-2 text-muted-foreground bg-muted/40 px-4 py-1.5 rounded-full animate-in fade-in slide-in-from-bottom-2 mt-2">
+                      <div className="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full bg-muted/40 px-3 py-1.5 text-muted-foreground animate-in fade-in slide-in-from-bottom-2 mt-2 sm:px-4">
                         <span className="text-xs uppercase font-bold tracking-widest">
                           Time Spent
                         </span>
-                        <span className="text-xl font-mono font-bold text-foreground">
+                        <span className="font-mono text-base font-bold text-foreground sm:text-xl">
                           {formatHms(stats.totalWorkMs)}
                         </span>
                       </div>
@@ -770,14 +770,14 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="grid grid-cols-1 gap-2 pt-1 min-[380px]:grid-cols-2">
                       <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-secondary/40 border border-border/50">
                         <span className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground mb-0.5">
                           {stats.remainingMs <= 0 ? "Finished At" : "Completes At"}
                         </span>
                         <div className="flex items-center gap-1 text-foreground">
                           <Icons.Flag className="w-3 h-3 text-primary/70" />
-                          <span className="text-xl font-mono font-bold tracking-tight">
+                          <span className="font-mono text-lg font-bold tracking-tight sm:text-xl">
                             {format(stats.estimatedEndTime, "hh:mm a")}
                           </span>
                         </div>
@@ -796,7 +796,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                         </span>
                         <div className="flex items-center gap-1 text-foreground">
                           <Icons.Target className="w-3 h-3 text-primary/70" />
-                          <span className="text-xl font-mono font-bold tracking-tight">
+                          <span className="font-mono text-lg font-bold tracking-tight sm:text-xl">
                             {stats.targetHours}h{" "}
                             {stats.targetMinutes > 0 ? `${stats.targetMinutes}m` : ""}
                           </span>
@@ -807,7 +807,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                 </CardContent>
               </Card>
 
-              <div className="grid grid-cols-2 gap-4 flex-1">
+              <div className="grid flex-1 grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:gap-4">
                 {/* First Punch */}
                 <Card className="h-full flex flex-col justify-center">
                   <CardHeader className="p-4 pb-2 space-y-0">
@@ -816,7 +816,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
-                    <div className="text-2xl sm:text-3xl font-bold font-mono">
+                    <div className="font-mono text-2xl font-bold sm:text-3xl">
                       {stats.firstPunchTime ? format(stats.firstPunchTime, "hh:mm a") : "--:--"}
                     </div>
                   </CardContent>
@@ -829,8 +829,8 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                       <Icons.Coffee className="h-3 w-3" /> Breaks
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-4 pt-0 flex items-center justify-between">
-                    <div className="text-2xl sm:text-3xl font-bold font-mono">
+                  <CardContent className="flex flex-col gap-2 p-4 pt-0 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
+                    <div className="font-mono text-2xl font-bold sm:text-3xl">
                       {formatHms(stats.totalBreakMs)}
                     </div>
                     <div className="text-sm px-2.5 py-1 bg-secondary rounded-full font-medium">
@@ -878,7 +878,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
             </div>
 
             {/* Right Column: Timeline */}
-            <Card className="lg:col-span-1 flex flex-col border-none shadow-lg bg-gradient-to-br from-card to-secondary/10 h-full overflow-hidden">
+            <Card className="flex max-h-[28rem] flex-col overflow-hidden border-none bg-gradient-to-br from-card to-secondary/10 shadow-lg lg:col-span-1 w-full min-w-0">
               <CardHeader className="flex-none py-3 px-4 border-b bg-muted/20">
                 <div className="flex items-center justify-between">
                   <CardTitle className="font-headline text-sm font-bold flex items-center gap-2">
@@ -891,17 +891,49 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                 </div>
               </CardHeader>
               <CardContent className="flex-1 min-h-0 p-0 overflow-hidden relative">
-                <ScrollArea className="h-full w-full p-0">
+                <ScrollArea className="h-full w-full p-0 overflow-hidden">
                   {data.clockInDetails.length > 0 ? (
-                    <div className="divide-y divide-border/40">
+                    <div className="divide-y divide-border/40 w-full">
                       {data.clockInDetails.map((log, index) => {
                         const logTime = parseUtc(log.clockTime);
                         return (
                           <div
-                            key={index}
-                            className="flex items-center justify-between p-3 sm:p-4 hover:bg-muted/30 transition-colors group"
-                          >
-                            <div className="flex items-center gap-3">
+                          key={index}
+                          className="p-3 hover:bg-muted/30 transition-colors group"
+                        >
+                          {/* Mobile layout (<365px): stacked */}
+                          <div className="flex items-center gap-3 min-[365px]:hidden">
+                            <div
+                              className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center shadow-sm border ${
+                                log.inOutType === "IN"
+                                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                                  : "bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400"
+                              }`}
+                            >
+                              {log.inOutType === "IN" ? <Icons.LogIn className="h-4 w-4" /> : <Icons.LogOut className="h-4 w-4" />}
+                            </div>
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className={`font-bold text-sm truncate ${log.inOutType === "IN" ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"}`}>
+                                  {log.inOutType === "IN" ? "Walk In" : "Walk Out"}
+                                </span>
+                                <span className="font-mono text-xs font-bold text-foreground shrink-0">
+                                  {format(logTime, "hh:mm a")}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                                <Icons.MapPin className="h-3 w-3 shrink-0" />
+                                <span className="truncate">
+                                  {log.officeName || "Remote"}
+                                  {log.deviceName && <span className="opacity-70"> • {log.deviceName}</span>}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Desktop layout (>=365px): side by side */}
+                          <div className="hidden min-[365px]:flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
                               <div
                                 className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center shadow-sm border ${
                                   log.inOutType === "IN"
@@ -909,19 +941,13 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                                     : "bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400"
                                 }`}
                               >
-                                {log.inOutType === "IN" ? (
-                                  <Icons.LogIn className="h-4 w-4" />
-                                ) : (
-                                  <Icons.LogOut className="h-4 w-4" />
-                                )}
+                                {log.inOutType === "IN" ? <Icons.LogIn className="h-4 w-4" /> : <Icons.LogOut className="h-4 w-4" />}
                               </div>
                               <div className="flex flex-col min-w-0">
-                                <span
-                                  className={`font-bold text-sm sm:text-base truncate ${log.inOutType === "IN" ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"}`}
-                                >
+                                <span className={`font-bold text-sm sm:text-base truncate ${log.inOutType === "IN" ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"}`}>
                                   {log.inOutType === "IN" ? "Walk In" : "Walk Out"}
                                 </span>
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5 truncate">
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                                   <Icons.MapPin className="h-3.5 w-3.5 shrink-0" />
                                   <span className="truncate">
                                     {log.officeName || "Remote"}
@@ -939,6 +965,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                                   {format(logTime, "a")}
                                 </span>
                               </span>
+                            </div>
                             </div>
                           </div>
                         );

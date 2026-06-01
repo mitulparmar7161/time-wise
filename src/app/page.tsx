@@ -440,28 +440,38 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden p-4 sm:p-6 bg-gradient-to-br from-background via-secondary/20 to-background">
+    <div className="flex min-h-dvh w-full max-w-full flex-col overflow-x-hidden overflow-y-auto bg-gradient-to-br from-background via-secondary/20 to-background px-2 py-3 sm:p-6 2xl:h-screen 2xl:overflow-hidden">
       <WelcomeDialog open={isWelcomeDialogOpen} onOpenChange={setIsWelcomeDialogOpen} />
       <ThanksDialog open={isThanksDialogOpen} onOpenChange={setIsThanksDialogOpen} />
 
-      <header className="w-full max-w-7xl flex justify-between items-center mb-4 mx-auto flex-none">
-        <h1 className="text-3xl sm:text-4xl font-bold font-headline text-primary">TimeWise</h1>
+      <header className="mb-3 flex w-full flex-none items-center justify-between gap-3 sm:mb-4 sm:mx-auto sm:max-w-7xl">
+        <h1 className="text-2xl font-bold font-headline text-primary sm:text-4xl">TimeWise</h1>
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <AboutSheet />
         </div>
       </header>
 
-      <main className="w-full max-w-7xl mx-auto flex flex-col gap-6 flex-1 min-h-0">
-        <Tabs defaultValue="tracker" className="h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="tracker">Manual Time Tracker</TabsTrigger>
-            <TabsTrigger value="mewurk">Mewurk Logs</TabsTrigger>
+      <main className="flex w-full min-w-0 flex-1 flex-col gap-4 sm:mx-auto sm:max-w-7xl 2xl:min-h-0">
+        <Tabs defaultValue="mewurk" className="flex flex-col 2xl:h-full 2xl:min-h-0">
+          <TabsList className="mb-3 grid h-12 w-full grid-cols-2 gap-1 p-1 sm:mb-4">
+            <TabsTrigger
+              value="tracker"
+              className="h-full w-full whitespace-normal px-3 text-xs leading-tight sm:text-sm"
+            >
+              Manual Time Tracker
+            </TabsTrigger>
+            <TabsTrigger
+              value="mewurk"
+              className="h-full w-full whitespace-normal px-3 text-xs leading-tight sm:text-sm"
+            >
+              Mewurk Logs
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent
             value="tracker"
-            className="h-full mt-0 flex-1 min-h-0 data-[state=active]:flex data-[state=active]:flex-col"
+            className="mt-0 flex-1 2xl:min-h-0 2xl:overflow-hidden data-[state=active]:flex data-[state=active]:flex-col"
           >
             <TimeTrackerCards
               isWorkDayOver={isWorkDayOver}
@@ -506,15 +516,15 @@ export default function Home() {
 
           <TabsContent
             value="mewurk"
-            className="h-full mt-0 flex-1 min-h-0 data-[state=active]:flex data-[state=active]:flex-col"
+            className="mt-0 flex-1 2xl:min-h-0 data-[state=active]:flex data-[state=active]:flex-col"
           >
             {mewurkLogsTab}
           </TabsContent>
         </Tabs>
       </main>
 
-      <footer className="w-full max-w-7xl mx-auto text-center pt-4 pb-2 flex-none">
-        <p className="text-sm text-muted-foreground px-4 sm:px-6">
+      <footer className="mx-auto w-full max-w-7xl flex-none pb-2 pt-4 text-center">
+        <p className="px-2 text-xs text-muted-foreground sm:px-6 sm:text-sm">
           Built by{" "}
           <a
             href="https://www.linkedin.com/in/mitulparmar11/"

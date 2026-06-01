@@ -130,11 +130,15 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
   }, []);
 
   // ── Auto-focus input when sidebar search opens ──
-  useEffect(() => {
-    if (searchOpen) {
-      setTimeout(() => sidebarInputRef.current?.focus(), 50);
-    }
-  }, [searchOpen]);
+ useEffect(() => {
+  if (!searchOpen) return;
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      sidebarInputRef.current?.focus();
+    });
+  });
+}, [searchOpen]);
 
   const filterEmployees = (list: EmployeeSearchResult[], value: string) => {
     const lower = value.toLowerCase().trim();
@@ -381,12 +385,8 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
   }
 
   return (
-    <div className="flex flex-col gap-0 h-full overflow-hidden">
-      {/* ══════════════════════════════════════
-          SIDEBAR SEARCH TRIGGER — top of panel
-          Only visible when token exists
-      ══════════════════════════════════════ */}
-      <div className="flex-none px-1 pb-4">
+    <div className="flex flex-col gap-0 overflow-visible">
+      <div className="flex-none px-0 pb-4 sm:px-1">
         <div className="flex flex-col gap-2 sm:flex-row">
           <div ref={sidebarSearchRef} className="relative flex-1">
           {/* ── Collapsed: icon button ── */}
@@ -422,19 +422,24 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
                       : "Loading employee directory"}
                 </span> */}
               </span>
-              <span className="shrink-0 rounded-md border border-border/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70 group-hover:border-primary/30 group-hover:text-primary">
+              <span className="hidden shrink-0 rounded-md border border-border/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70 group-hover:border-primary/30 group-hover:text-primary min-[380px]:inline-flex">
                 Find
               </span>
             </button>
           )}
 
           {/* ── Expanded search ── */}
-          {searchOpen && (
+              <div
+                  className={cn(
+                    searchOpen ? "block" : "hidden"
+                  )}
+                >
             <div className="flex flex-col gap-2 rounded-lg border border-primary/25 bg-card p-2 shadow-lg">
               <div className="flex items-center gap-2 rounded-md border border-border/70 bg-background px-3 h-11 shadow-inner focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/10">
                 <Search className="h-4 w-4 text-primary/80 flex-shrink-0" />
                 <input
                   ref={sidebarInputRef}
+                  autoFocus
                   value={query}
                   onChange={(e) => handleSearchInput(e.target.value)}
                   onFocus={() => setShowDropdown(Boolean(query.trim()))}
@@ -546,7 +551,7 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
                 </div>
               )}
             </div>
-          )}
+          </div>
           </div>
         </div>
       </div>
@@ -563,7 +568,7 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
               style={{ animationDuration: "3s" }}
             />
           </div>
-          <div className="text-center space-y-1">
+          <div className="max-w-xs px-4 text-center space-y-1">
             <p className="text-base font-semibold text-foreground/60">Find an Employee</p>
             <p className="text-sm text-muted-foreground/50">
               Type a name or employee code to view their attendance
@@ -581,12 +586,12 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
 
       {/* ── Employee view ── */}
       {selectedEmployee && (
-        <div className="flex-1 min-h-0 flex flex-col gap-4 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="flex-1 flex flex-col gap-4 overflow-visible animate-in fade-in slide-in-from-bottom-2 duration-300">
           {/* Profile strip */}
-          <div className="flex-none flex items-center gap-4 px-1">
+          <div className="flex-none flex items-start gap-3 px-0 sm:items-center sm:gap-4 sm:px-1">
             <div className="relative shrink-0">
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-blue-600/20 border border-primary/20 flex items-center justify-center shadow-lg">
-                <span className="text-xl font-bold bg-gradient-to-br from-primary to-blue-400 bg-clip-text text-transparent">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/20 to-blue-600/20 shadow-lg sm:h-14 sm:w-14">
+                <span className="bg-gradient-to-br from-primary to-blue-400 bg-clip-text text-lg font-bold text-transparent sm:text-xl">
                   {initials}
                 </span>
               </div>
@@ -607,12 +612,12 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
                   #{selectedEmployee.employeeCode}
                 </span>
                 {selectedEmployee.designation && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                  <span className="max-w-full truncate text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                     {selectedEmployee.designation}
                   </span>
                 )}
                 {selectedEmployee.department && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground font-medium">
+                  <span className="max-w-full truncate text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground font-medium">
                     {selectedEmployee.department}
                   </span>
                 )}
@@ -629,14 +634,14 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
 
           {/* Monthly stats strip */}
           {loadingData && !monthStats ? (
-            <div className="grid grid-cols-4 gap-2 flex-none">
+            <div className="grid flex-none grid-cols-2 gap-2 sm:grid-cols-4">
               {[0, 1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-16 rounded-xl" />
               ))}
             </div>
           ) : (
             monthStats && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-none">
+              <div className="grid flex-none grid-cols-1 gap-2 min-[380px]:grid-cols-2 sm:grid-cols-4">
                 {[
                   {
                     label: "Present",
@@ -691,8 +696,8 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
 
           {/* Main content */}
           {loadingData && !attendanceData ? (
-            <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-3 overflow-hidden">
-              <div className="lg:col-span-3 flex flex-col gap-3">
+            <div className="grid flex-1 grid-cols-1 gap-3 overflow-visible lg:grid-cols-5">
+              <div className="flex flex-col gap-3 lg:col-span-3">
                 <Skeleton className="h-44 rounded-2xl" />
                 <div className="grid grid-cols-2 gap-3 flex-1">
                   {[0, 1, 2, 3].map((i) => (
@@ -703,7 +708,7 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
               <Skeleton className="lg:col-span-2 rounded-2xl min-h-32" />
             </div>
           ) : !attendanceData ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground/50">
+            <div className="flex min-h-[20rem] flex-1 flex-col items-center justify-center gap-3 text-muted-foreground/50">
               <div className="h-16 w-16 rounded-2xl bg-muted/20 flex items-center justify-center">
                 <Icons.Ghost className="h-7 w-7" />
               </div>
@@ -716,12 +721,12 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
             </div>
           ) : (
             stats && (
-              <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-3 overflow-hidden">
+              <div className="grid flex-1 grid-cols-1 gap-3 overflow-visible lg:grid-cols-5">
                 {/* Left: main stats */}
-                <div className="lg:col-span-3 flex flex-col gap-3 overflow-y-auto">
+                <div className="flex flex-col gap-3 overflow-visible lg:col-span-3">
                   {/* Hero time card */}
                   <div
-                    className={`rounded-2xl p-5 relative overflow-hidden border ${
+                    className={`relative overflow-hidden rounded-2xl border p-4 sm:p-5 ${
                       stats.remainingMs <= 0
                         ? "border-orange-500/20 bg-gradient-to-br from-orange-500/5 to-red-500/5"
                         : "border-primary/20 bg-gradient-to-br from-primary/5 to-blue-500/5"
@@ -735,7 +740,7 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
                       />
                     </div> */}
                     <div className="relative z-10">
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="mb-3 flex flex-col gap-2 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
                         <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
                           {stats.remainingMs > 0 ? "Time Remaining" : "Overtime"}
                         </span>
@@ -750,7 +755,7 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
                         </span>
                       </div>
                       <div
-                        className={`text-5xl sm:text-6xl font-black font-mono tracking-tighter tabular-nums ${
+                        className={`w-full min-w-0 break-words font-mono text-[clamp(2.1rem,11vw,3.75rem)] font-black leading-none tracking-tighter tabular-nums ${
                           stats.remainingMs <= 0 ? "text-orange-500" : "text-foreground"
                         }`}
                       >
@@ -777,7 +782,7 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
                           />
                         </div>
                       </div>
-                      <div className="mt-3 flex items-center gap-4">
+                      <div className="mt-3 flex flex-col gap-2 min-[380px]:flex-row min-[380px]:items-center min-[380px]:gap-4">
                         <div className="flex items-center gap-1.5 text-muted-foreground/60 text-xs">
                           <Flag className="h-3 w-3" />
                           <span>
@@ -797,7 +802,7 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
                   </div>
 
                   {/* Mini stat cards */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
                     <div className="rounded-xl border border-border/50 bg-card p-4">
                       <div className="flex items-center gap-2 text-muted-foreground/60 mb-2">
                         <Timer className="h-3.5 w-3.5" />
@@ -805,7 +810,7 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
                           Started At
                         </span>
                       </div>
-                      <div className="text-2xl font-bold font-mono">
+                      <div className="font-mono text-xl font-bold sm:text-2xl">
                         {stats.firstPunchTime ? format(stats.firstPunchTime, "hh:mm") : "--:--"}
                         <span className="text-sm font-sans text-muted-foreground ml-1">
                           {stats.firstPunchTime ? format(stats.firstPunchTime, "a") : ""}
@@ -819,7 +824,7 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
                           Break Time
                         </span>
                       </div>
-                      <div className="text-2xl font-bold font-mono">
+                      <div className="font-mono text-xl font-bold sm:text-2xl">
                         {formatHms(stats.totalBreakMs)}
                         <span className="text-xs font-sans text-muted-foreground ml-1.5 px-1.5 py-0.5 rounded-full bg-secondary">
                           {stats.breakCount}x
@@ -858,7 +863,7 @@ export function EmployeeSearch({ token = null, date }: EmployeeSearchProps) {
                 </div>
 
                 {/* Right: Timeline */}
-                <div className="lg:col-span-2 flex flex-col rounded-2xl border border-border/50 bg-card overflow-hidden min-h-0">
+                <div className="flex max-h-[28rem] flex-col overflow-hidden rounded-2xl border border-border/50 bg-card lg:col-span-2">
                   <div className="flex-none px-4 py-3 border-b border-border/40 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
