@@ -2,7 +2,7 @@
 
 import { differenceInMilliseconds, format, isSameDay, isValid } from "date-fns";
 import { Search } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   getAttendanceLogsAction,
@@ -55,6 +55,8 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
   const [token, setToken] = useState<string | null>(null);
   const [employeeCode, setEmployeeCode] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  // ─── NEW: guard so we never treat the initial async null as "logged out" ───
+  const [isAuthInitialized, setIsAuthInitialized] = useState(false);
 
   // Login Form State
   const [email, setEmail] = useState("");
@@ -76,6 +78,16 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [activeView, setActiveView] = useState<"my-logs" | "search">("my-logs");
 
+  // ─── Stable refs so intervals/callbacks never capture stale closures ───
+  const tokenRef = useRef<string | null>(null);
+  const employeeCodeRef = useRef<string | null>(null);
+  const dateRef = useRef<Date>(new Date());
+
+  // Keep refs in sync with state
+  useEffect(() => { tokenRef.current = token; }, [token]);
+  useEffect(() => { employeeCodeRef.current = employeeCode; }, [employeeCode]);
+  useEffect(() => { dateRef.current = date; }, [date]);
+
   const getLogsCacheKey = useCallback(
     (selectedDate: Date, code: string) =>
       `${MEWURK_LOGS_CACHE_PREFIX}:${code}:${format(selectedDate, "yyyy-MM-dd")}`,
@@ -83,6 +95,9 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
   );
 
   const readCachedLogs = useCallback((cacheKey: string): CachedMewurkLogs | null => {
+    // ─── Never serve cache for today — always want fresh data ───
+    const datePart = cacheKey.split(":").slice(2).join(":");
+    if (isSameDay(new Date(datePart), new Date())) return null;
     try {
       const cached = sessionStorage.getItem(cacheKey);
       return cached ? (JSON.parse(cached) as CachedMewurkLogs) : null;
@@ -93,6 +108,9 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
   }, []);
 
   const writeCachedLogs = useCallback((cacheKey: string, value: CachedMewurkLogs) => {
+    // ─── Never cache today's data — it changes as employee clocks in/out ───
+    const datePart = cacheKey.split(":").slice(2).join(":");
+    if (isSameDay(new Date(datePart), new Date())) return;
     try {
       sessionStorage.setItem(cacheKey, JSON.stringify(value));
     } catch (e) {
@@ -100,7 +118,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
     }
   }, []);
 
-  // Load auth from cookies on mount
+  // ─── Load auth from cookies on mount ───
   useEffect(() => {
     const initAuth = async () => {
       const state = await getInitialAuthStateAction();
@@ -109,11 +127,12 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
         setEmployeeCode(state.employeeCode);
         setUserName(state.userName);
       }
+      // ─── Mark auth as ready AFTER we know the real state ───
+      setIsAuthInitialized(true);
     };
     initAuth();
 
-    // Timer for live calculation
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000); // every second
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -122,6 +141,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
       const res = await refreshSessionAction();
       if (res.isSuccess && res.token) {
         setToken(res.token);
+        tokenRef.current = res.token;
         return true;
       }
     } catch (e) {
@@ -176,13 +196,19 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
     setEmployeeCode(null);
     setUserName(null);
     setData(null);
-    setMonthStats(null); // Clear month stats on logout
+    setMonthStats(null);
   }, []);
 
+  // ─── Core fetch — always hits network for today, cache only for past dates ───
   const fetchLogs = useCallback(async () => {
-    if (!token || !employeeCode) return;
+    const currentToken = tokenRef.current;
+    const currentCode = employeeCodeRef.current;
+    const currentDate = dateRef.current;
 
-    const cacheKey = getLogsCacheKey(date, employeeCode);
+    if (!currentToken || !currentCode) return;
+
+    const cacheKey = getLogsCacheKey(currentDate, currentCode);
+    // readCachedLogs already returns null for today, so this is safe
     const cached = readCachedLogs(cacheKey);
     if (cached) {
       setData(cached.data);
@@ -196,12 +222,9 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
     setError(null);
 
     try {
-      const formattedDate = format(date, "yyyy-MM-dd");
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1; // 1-indexed for API
-      let nextData: AttendanceData | null = null;
-      let nextMonthStats: MonthStats | null = null;
-      let shouldCache = false;
+      const formattedDate = format(currentDate, "yyyy-MM-dd");
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth() + 1;
 
       const [logsRes, statsRes] = await Promise.all([
         getAttendanceLogsAction(formattedDate),
@@ -209,18 +232,18 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
       ]);
 
       if (logsRes.isSuccess && "data" in logsRes) {
-        nextData = logsRes.data;
-        shouldCache = true;
-        setData(nextData);
+        setData(logsRes.data);
+        const nextMonthStats =
+          statsRes.isSuccess && "data" in statsRes
+            ? statsRes.data.cardDetails
+            : null;
+        if (nextMonthStats) setMonthStats(nextMonthStats);
+        // Only cache past dates
+        writeCachedLogs(cacheKey, { data: logsRes.data, monthStats: nextMonthStats });
       } else {
         if (logsRes.statusCode === 401) {
-          // Try to refresh token
           const refreshed = await refreshSession();
-          if (refreshed) {
-            // Retry fetch (will happen automatically due to token dependency in useEffect)
-            return;
-          }
-
+          if (refreshed) return; // useEffect will re-run via token change
           handleLogout();
           toast({
             title: "Session Expired",
@@ -233,23 +256,14 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
       }
 
       if (statsRes.isSuccess && "data" in statsRes) {
-        nextMonthStats = statsRes.data.cardDetails;
-        setMonthStats(nextMonthStats);
-      } else {
-        console.error("Failed to fetch month stats:", statsRes.message);
-        if (statsRes.statusCode === 401) {
-          handleLogout();
-          toast({
-            title: "Session Expired",
-            description: "Please login again.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      if (shouldCache) {
-        writeCachedLogs(cacheKey, { data: nextData, monthStats: nextMonthStats });
+        setMonthStats(statsRes.data.cardDetails);
+      } else if (statsRes.statusCode === 401) {
+        handleLogout();
+        toast({
+          title: "Session Expired",
+          description: "Please login again.",
+          variant: "destructive",
+        });
       }
     } catch (err: unknown) {
       console.error("Fetch error:", err);
@@ -267,32 +281,54 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
     } finally {
       setLoading(false);
     }
-  }, [
-    date,
-    token,
-    employeeCode,
-    getLogsCacheKey,
-    readCachedLogs,
-    refreshSession,
-    handleLogout,
-    toast,
-    writeCachedLogs,
-  ]);
+  }, [getLogsCacheKey, readCachedLogs, writeCachedLogs, refreshSession, handleLogout, toast]);
 
+  // ─── Trigger fetchLogs when date/token/code changes ───
   useEffect(() => {
+    if (!isAuthInitialized) return; // wait until we know real auth state
     if (token && employeeCode) {
       fetchLogs();
     }
-  }, [date, token, employeeCode, fetchLogs]);
+  }, [date, token, employeeCode, isAuthInitialized, fetchLogs]);
+
+  // ─── Silent 30s polling for today only — reads from refs so never stale ───
+  useEffect(() => {
+    if (!isAuthInitialized) return;
+
+    const tick = async () => {
+      const currentToken = tokenRef.current;
+      const currentCode = employeeCodeRef.current;
+      const currentDate = dateRef.current;
+
+      // Only poll if logged in and viewing today
+      if (!currentToken || !currentCode) return;
+      if (!isSameDay(currentDate, new Date())) return;
+
+      try {
+        const formattedDate = format(currentDate, "yyyy-MM-dd");
+        const [logsRes, statsRes] = await Promise.all([
+          getAttendanceLogsAction(formattedDate),
+          getCardDetailsAction(currentDate.getFullYear(), currentDate.getMonth() + 1),
+        ]);
+        if (logsRes.isSuccess && "data" in logsRes) setData(logsRes.data);
+        if (statsRes.isSuccess && "data" in statsRes)
+          setMonthStats(statsRes.data.cardDetails);
+      } catch {
+        // silent — don't show errors on background polls
+      }
+    };
+
+    const interval = setInterval(tick, 30_000);
+    return () => clearInterval(interval);
+    // ─── Only depends on isAuthInitialized — refs handle the rest ───
+  }, [isAuthInitialized]);
 
   // --- CALCULATIONS ---
   const parseUtc = (dateStr: string) => {
     if (!dateStr) return new Date();
-    // If ISO format (e.g. 2026-02-06T04:16:00), force UTC by adding Z if missing
     if (dateStr.includes("T") && !dateStr.toLowerCase().includes("z")) {
       return new Date(dateStr + "Z");
     }
-    // If custom format "MM/dd/yyyy HH:mm:ss", parse manually as UTC
     if (dateStr.match(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}$/)) {
       const [datePart, timePart] = dateStr.split(" ");
       const [month, day, year] = datePart.split("/");
@@ -316,7 +352,6 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
     let accumulatedWorkMs = 0;
     let targetMet = false;
 
-    let totalWorkMs = 0;
     let totalBreakMs = 0;
     let breakCount = 0;
 
@@ -387,8 +422,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
       }
     }
 
-    totalWorkMs = accumulatedWorkMs;
-
+    const totalWorkMs = accumulatedWorkMs;
     const remainingMs = shiftTotalMs - totalWorkMs;
     const progress = Math.min(100, (totalWorkMs / shiftTotalMs) * 100);
 
@@ -421,6 +455,15 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
     const s = Math.floor((ms % (1000 * 60)) / 1000);
     return `${h}h ${m}m ${s}s`;
   };
+
+  // ─── Show nothing until we know auth state (prevents login flash on tab switch) ───
+  if (!isAuthInitialized) {
+    return (
+      <div className="flex min-h-[60dvh] items-center justify-center">
+        <Icons.Loader className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   // Login View
   if (!token) {
@@ -540,7 +583,6 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
           </div>
 
           <div className="grid w-full grid-cols-[1fr_auto] gap-2 sm:flex sm:w-auto sm:items-center">
-            {/* Toggle Button to swap views */}
             <Button
               variant={activeView === "search" ? "secondary" : "default"}
               className={cn(
@@ -594,7 +636,6 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
               </Popover>
             </div>
 
-            {/* Logout Button */}
             <Button
               variant="outline"
               size="icon"
@@ -839,7 +880,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                   </CardContent>
                 </Card>
 
-                {/* Shift Info (Compacted) */}
+                {/* Shift Info */}
                 <Card className="h-full flex flex-col justify-center overflow-hidden bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border-indigo-500/20">
                   <CardHeader className="p-4 pb-2 space-y-0">
                     <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -855,7 +896,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
                   </CardContent>
                 </Card>
 
-                {/* Policy Info (Compacted) */}
+                {/* Policy Info */}
                 <Card className="h-full flex flex-col justify-center overflow-hidden bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-emerald-500/20">
                   <CardHeader className="p-4 pb-2 space-y-0">
                     <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
