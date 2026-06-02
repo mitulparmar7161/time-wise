@@ -919,7 +919,7 @@ export function MewurkLogs({ targetHours, targetMinutes }: MewurkLogsProps) {
             </div>
 
             {/* Right Column: Timeline */}
-            <Card className="flex max-h-[28rem] flex-col overflow-hidden border-none bg-gradient-to-br from-card to-secondary/10 shadow-lg lg:col-span-1 w-full min-w-0">
+            <Card className="flex max-h-[33rem] flex-col overflow-hidden border-none bg-gradient-to-br from-card to-secondary/10 shadow-lg lg:col-span-1 w-full min-w-0">
               <CardHeader className="flex-none py-3 px-4 border-b bg-muted/20">
                 <div className="flex items-center justify-between">
                   <CardTitle className="font-headline text-sm font-bold flex items-center gap-2">
