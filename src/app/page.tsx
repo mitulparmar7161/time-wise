@@ -440,7 +440,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-dvh w-full max-w-full flex-col overflow-x-hidden overflow-y-auto bg-gradient-to-br from-background via-secondary/20 to-background px-2 py-3 sm:p-6 2xl:h-screen 2xl:overflow-hidden">
+    <div className="flex min-h-dvh w-full max-w-full flex-col overflow-x-hidden overflow-y-auto bg-gradient-to-br from-background via-secondary/20 to-background px-2 py-3 sm:p-6">
       <WelcomeDialog open={isWelcomeDialogOpen} onOpenChange={setIsWelcomeDialogOpen} />
       <ThanksDialog open={isThanksDialogOpen} onOpenChange={setIsThanksDialogOpen} />
 
@@ -452,8 +452,8 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex w-full min-w-0 flex-1 flex-col gap-4 sm:mx-auto sm:max-w-7xl 2xl:min-h-0">
-        <Tabs defaultValue="mewurk" className="flex flex-col 2xl:h-full 2xl:min-h-0">
+      <main className="flex w-full min-w-0 flex-1 flex-col gap-4 sm:mx-auto sm:max-w-7xl">
+        <Tabs defaultValue="mewurk" className="flex flex-col">
           <TabsList className="mb-3 grid h-12 w-full grid-cols-2 gap-1 p-1 sm:mb-4">
             <TabsTrigger
               value="tracker"
@@ -471,7 +471,7 @@ export default function Home() {
 
           <TabsContent
             value="tracker"
-            className="mt-0 flex-1 2xl:min-h-0 2xl:overflow-hidden data-[state=active]:flex data-[state=active]:flex-col"
+            className="mt-0 flex-1 data-[state=active]:flex data-[state=active]:flex-col"
           >
             <TimeTrackerCards
               isWorkDayOver={isWorkDayOver}
@@ -516,7 +516,7 @@ export default function Home() {
 
           <TabsContent
             value="mewurk"
-            className="mt-0 flex-1 2xl:min-h-0 data-[state=active]:flex data-[state=active]:flex-col"
+            className="mt-0 flex-1 data-[state=active]:flex data-[state=active]:flex-col"
           >
             {mewurkLogsTab}
           </TabsContent>
