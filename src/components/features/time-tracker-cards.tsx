@@ -85,25 +85,25 @@ export function TimeTrackerCards({
   };
 
   const handleSaveDuration = () => {
-      onDurationSettingsChange(tempHours, tempMinutes);
-      setIsEditingDuration(false);
-  }
+    onDurationSettingsChange(tempHours, tempMinutes);
+    setIsEditingDuration(false);
+  };
 
   const startEditingDuration = () => {
-      if (isEditingDuration) {
-          setIsEditingDuration(false);
-          return;
-      }
-      setTempHours(fullDayHours);
-      setTempMinutes(fullDayMinutes);
-      setIsEditingDuration(true);
-  }
+    if (isEditingDuration) {
+      setIsEditingDuration(false);
+      return;
+    }
+    setTempHours(fullDayHours);
+    setTempMinutes(fullDayMinutes);
+    setIsEditingDuration(true);
+  };
 
   const handleAddBreak = (mode: "add" | "reduce") => {
     let minutes = parseInt(manualBreakMinutes, 10);
     if (!isNaN(minutes) && minutes > 0) {
       if (mode === "reduce") {
-          minutes = -minutes;
+        minutes = -minutes;
       }
       onAddManualBreak(minutes);
       setManualBreakMinutes("");
@@ -113,7 +113,7 @@ export function TimeTrackerCards({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex w-full max-w-full overflow-x-hidden overflow-y-visible flex-col gap-4 font-sans sm:gap-6 2xl:h-full 2xl:min-h-0 2xl:overflow-hidden">
+      <div className="flex w-full max-w-full overflow-x-hidden flex-col gap-4 font-sans sm:gap-6">
         <Card
           className={`text-center shadow-lg flex-none transition-all duration-300 hover:shadow-xl ${
             isWorkDayOver
@@ -440,15 +440,15 @@ export function TimeTrackerCards({
         </div>
 
         {logs && logs.length > 0 && (
-          <Card className="shadow-md w-full flex flex-col border-muted bg-muted/20 overflow-hidden 2xl:min-h-0 2xl:flex-1">
+          <Card className="shadow-md w-full flex flex-col border-muted bg-muted/20 overflow-hidden">
             <CardHeader className="flex-none py-3 px-4 border-b bg-card rounded-t-lg">
               <CardTitle className="font-headline text-sm font-medium flex items-center gap-2 text-muted-foreground">
                 <Icons.ListTodo className="h-4 w-4" />
                 Session Logs
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0 overflow-hidden bg-card/50 2xl:min-h-0 2xl:flex-1">
-              <ScrollArea className="h-72 w-full p-3 sm:p-4 lg:h-80 2xl:h-full">
+            <CardContent className="p-0 overflow-hidden bg-card/50">
+              <ScrollArea className="h-72 w-full p-3 sm:p-4 lg:h-80">
                 <div className="space-y-3 min-w-0 w-full">
                   {logs
                     .slice()
@@ -456,10 +456,11 @@ export function TimeTrackerCards({
                     .map((log, index) => (
                       <div
                         key={index}
-                      className="flex flex-col gap-1 text-sm group hover:bg-muted/50 p-2 rounded-md transition-colors">
+                        className="flex flex-col gap-1 text-sm group hover:bg-muted/50 p-2 rounded-md transition-colors"
+                      >
                         <div className="flex min-w-0 items-center gap-3 w-full">
                           <div
-                          className={`flex-shrink-0 p-1.5 rounded-full ${
+                            className={`flex-shrink-0 p-1.5 rounded-full ${
                               log.type === "punch-in"
                                 ? "bg-green-100 dark:bg-green-900/30 text-green-600"
                                 : log.type === "break-start"
@@ -478,18 +479,18 @@ export function TimeTrackerCards({
                           <span className="break-all font-medium text-foreground min-w-0">
                             {log.message}
                           </span>
-                            </div>
-                              <span className="font-mono text-xs text-muted-foreground/70">
-                                  {format(new Date(log.timestamp), "hh:mm:ss a")}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </ScrollArea>
+                        </div>
+                        <span className="font-mono text-xs text-muted-foreground/70">
+                          {format(new Date(log.timestamp), "hh:mm:ss a")}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </ScrollArea>
             </CardContent>
-        </Card>
-      )}
-    </div>
+          </Card>
+        )}
+      </div>
     </TooltipProvider>
   );
 }
